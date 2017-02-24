@@ -19,7 +19,7 @@ namespace chess
 std::string AI::get_name() const
 {
     // REPLACE WITH YOUR TEAM NAME!
-    return "Chess C++ Player";
+    return "FreakBot";
 }
 
 /// <summary>
@@ -76,10 +76,8 @@ bool AI::run_turn()
     std::cout << "Time Remaining: " << player->time_remaining << " ns" << std::endl;
 
     // 4) make a random (and probably invalid) move.
-    chess::Piece random_piece = player->pieces[rand() % player->pieces.size()];
-    std::string random_file(1, 'a' + rand() % 8);
-    int random_rank = (rand() % 8) + 1;
-    random_piece->move(random_file, random_rank);
+    chess::Piece p = player->pieces[0];
+    p->move(p->file, p->rank + player->rank_direction);
 
     return true; // to signify we are done with our turn.
 }

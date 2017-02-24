@@ -2,7 +2,7 @@
 
 if [ -z "$1" ]
   then
-    echo "No argument(s) supplied. Please specify game session you want to join or make."
+    ./run Chess -s r99acm.device.mst.edu
   else
     ./run Chess -s r99acm.device.mst.edu -r "$@"
 fi
