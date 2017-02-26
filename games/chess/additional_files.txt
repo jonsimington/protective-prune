@@ -3,3 +3,4 @@
 # You would add the following line to this folder (without the #)
 # my_code/stuff.cpp
 # If your build fails after adding files, try to build again
+./custom_board.cpp
