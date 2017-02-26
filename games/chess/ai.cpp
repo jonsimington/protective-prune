@@ -77,7 +77,7 @@ bool AI::run_turn()
     chess::Piece p = player->pieces[rand() % player->pieces.size()];
 
     State state(game);
-    state.print();
+    //state.print();
 
 
 
@@ -90,9 +90,9 @@ bool AI::run_turn()
     }
     int i = rand() % moves.size();
     auto move = moves[i];
-    State* result = state.RESULT(move);
+    /*State* result = state.RESULT(move);
     result->print();
-    delete result;
+    delete result;*/
 
     for (auto piece : player->pieces)
     {
