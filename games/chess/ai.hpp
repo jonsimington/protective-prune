@@ -36,7 +36,9 @@ struct MyMove {
     char file2;
     int rank2;
     char promotion;
-    MyMove(char startingFile, int startingRank, char targetFile, int targetRank, char promotion_='\0'): rank(startingRank), file(startingFile), rank2(targetRank), file2(targetFile), promotion(promotion_) {};
+    std::string move_type;
+
+    MyMove(char startingFile, int startingRank, char targetFile, int targetRank, char promotion_='\0', std::string _move_type = "Move"): rank(startingRank), file(startingFile), rank2(targetRank), file2(targetFile), promotion(promotion_), move_type(_move_type) {};
 };
 
 class State {

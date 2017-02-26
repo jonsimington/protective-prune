@@ -5,6 +5,8 @@
 
 // You can add #includes here for your AI.
 
+#include <cmath>
+
 namespace cpp_client
 {
 
@@ -137,6 +139,7 @@ bool AI::run_turn()
     }
     int i = rand() % moves.size();
     auto move = moves[i];
+    state.RESULT(move).print();
 
     for (auto piece : player->pieces)
     {
@@ -460,8 +463,18 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
         // Pawns can perform En Passant if
         //    the previous move was a pawn advancing two squares
         //    the pawn is now adjacent to this pawn
-        //Move last_move = game->moves[game->moves.size() - 1];
-        //if (last_move)
+        if (game->moves.size() > 0)
+        {
+          Move last_move = game->moves.back();
+          if (last_move->to_rank == rank && abs((int)(last_move->to_file[0] - 'a') - i) == 1)
+          {
+            if (abs(last_move->to_rank - last_move->from_rank) == 2 && last_move->piece->type == "Pawn")
+            {
+              int dir = last_move->to_file[0] - file;
+              moves.push_back(MyMove(file, rank, file+dir, rank+forward, '\0', "En Passant"));
+            }
+          }
+        }
 
 
 
@@ -493,15 +506,16 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
             bool can_castle = true;
             int fd, rd;
             std::tie(fd, rd) = direction;
+            int inc = fd > 0;
 
             MyPiece* castle = board[i+fd][j+rd];
             if (castle == nullptr || castle->has_moved)
               can_castle = false;
             else
             {
-              for (int m = i; m <= i + fd; m++)
+              for (int m = i; (inc ? m <= i + fd : m >= i + fd); (inc ? m++ : m--))
               {
-                if (m < i + fd / 2 && attackboard[m][j] > 0 || (m != i && board[m][j] != nullptr))
+                if ((inc ? m <= i + 2 : m >= i - 3) && attackboard[m][j] > 0 || (m != i && board[m][j] != nullptr))
                 {
                   can_castle = false;
                   break;
@@ -510,7 +524,7 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
             }
             if (can_castle)
             {
-              moves.push_back(MyMove(file, rank, file+fd, rank+rd));
+              moves.push_back(MyMove(file, rank, file + (inc ? 2 : -3), rank+rd, '\0', "Castle"));
             }
           }
         }
@@ -610,7 +624,6 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
   {
     MyMove move = moves[i];
     State successor = RESULT(move);
-    successor.print();
     int** attackboard = successor.attacked((current_player + 1) % 2);
     int ki, kj;
     bool found=false;
@@ -632,26 +645,12 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
       }
     }
 
-
-    for (int i = 7; i >= 0; i--)
-    {
-      std::cout << i + 1 << " | ";
-      for (int j = 0; j < 8; j++)
-      {
-        std::cout << attackboard[j][i] << " ";
-      }
-      std::cout << "|" << std::endl;
-    }
-    std::cout << "  + - - - - - - - - +\n" << "    a b c d e f g h" << std::endl << std::endl;
-
     if (attackboard[ki][kj] > 0)
     {
       moves.erase(moves.begin() + i);
       i--;
     }
   }
-
-  std::cout << moves.size() << std::endl;
 
   return moves;
 }
@@ -671,6 +670,17 @@ State State::RESULT(MyMove action) const
   
   result.board[file2][rank2] = newPiece;
   result.board[file][rank] = nullptr;
+
+  if (action.move_type == "En Passant")
+  {
+    result.board[file2][rank] = nullptr;
+  }
+  else if (action.move_type == "Castle")
+  {
+    MyPiece *castle = new MyPiece("Rook", true, oldPiece->owner);
+    int new_rank = (rank2 == 1 ? 2 : 5);
+    result.board[file2][new_rank] = castle;
+  }
 
   return result;
 }
