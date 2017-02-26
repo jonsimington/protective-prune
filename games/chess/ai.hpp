@@ -45,7 +45,7 @@ class State {
     bool current_player;
   public:
     std::vector<std::tuple<int,int>> attacking(int i, int j) const;
-    std::tuple<int, int> * attacked(int i, int j, int filedir, int rankdir, int range) const;
+    std::vector<std::tuple<int, int>> attacked(int i, int j, int filedir, int rankdir, int range) const;
     int** attacked(int attacker) const;
     State(const Game &game);
     State(const State &original);

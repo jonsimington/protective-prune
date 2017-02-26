@@ -137,7 +137,6 @@ bool AI::run_turn()
     }
     int i = rand() % moves.size();
     auto move = moves[i];
-    std::cout << moves.size() << std::endl;
 
     for (auto piece : player->pieces)
     {
@@ -226,36 +225,39 @@ void AI::print_current_board()
 const std::vector<pair> CARDINAL = {pair(0, 1), pair(0, -1), pair(1, 0), pair(-1, 0)};
 const std::vector<pair> ORDINAL = {pair(1, 1), pair(1, -1), pair(-1, 1), pair(-1, -1)};
 const std::vector<pair> PAWN_ATTACKS[2] = {{pair(1, 1), pair(-1, 1)}, {pair(1, -1), pair(-1, -1)}};
-const std::vector<pair> KNIGHT_MOVES = {pair(2, 1), pair(2, -1), pair(-1, 2), pair(-2, -1), pair(1, 2), pair(1, -2), pair(-1, 2), pair(-1, -2)};
+const std::vector<pair> KNIGHT_MOVES = {pair(2, 1), pair(2, -1), pair(-2, 1), pair(-2, -1), pair(1, 2), pair(1, -2), pair(-1, 2), pair(-1, -2)};
 const std::vector<pair> KING_MOVES = {pair(-1, -1), pair(-1, 0), pair(-1, 1), pair(0, -1), pair(0, 1), pair(1, -1), pair(1, 0), pair(1, 1)};
 const std::vector<pair> ROOK_MOVES = {pair(-1, 0), pair(0, -1), pair(0, 1), pair(1, 0)};
 const std::vector<pair> BISHOP_MOVES = {pair(-1, -1), pair(-1, 1), pair(1, -1), pair(1, 1)};
+const std::vector<pair> CASTLING = {{pair(-4, 0), pair(3, 0)}};
 
 // You can add additional methods here for your AI to call
 
-pair* State::attacked(int i, int j, int filedir, int rankdir, int range=1) const
+std::vector<pair> State::attacked(int i, int j, int filedir, int rankdir, int range=1) const
 {
-  // See which piece is attacked by the piece on i, j in direction filedir, rankdir at max range of range
+  std::vector<pair> _attacked;
+  // See which pieces are attacked by the piece on i, j in direction filedir, rankdir at max range of range
   for (int k = 1; k <= range; k++)
   {
     int file = i + filedir * k;
     int rank = j + rankdir * k;
     if (!iB(file) || !iB(rank))
-      return nullptr;
+      break;
     MyPiece *piece = board[file][rank];
     if (piece != nullptr)
     {
       if (piece->owner == board[i][j]->owner)
-        return nullptr;
-      return new pair(file, rank);
+        break;
+      _attacked.push_back(pair(file, rank));
+      break;
     }
   }
-  return nullptr;
+  return _attacked;
 }
 
 int** State::attacked(int attacker) const
 {
-  // How many units owned by attacker are attacking each tile
+  // How many units owned by attacker could attack each tile
   int** b2 = new int*[8];
   for (int i = 0; i < 8; i++)
   {
@@ -324,9 +326,8 @@ std::vector<pair> State::attacking(int i, int j) const
   {
     int fd, rd;
     std::tie(fd, rd) = direction;
-    auto *_attacked = attacked(i, j, fd, rd, range);
-    if (_attacked != nullptr)
-      _attacking.push_back(*_attacked);
+    for (auto _attacked: attacked(i, j, fd, rd, range))
+      _attacking.push_back(_attacked);
   }
 
   return _attacking;
@@ -383,7 +384,9 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
 {
   // string in SAN
   std::vector<MyMove> moves;
-  pair king;
+
+  int** attackboard = attacked((current_player + 1) % 2);
+
 
   for (int i = 0; i < 8; i++)
     for (int j = 0; j < 8; j++)
@@ -406,7 +409,10 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
         // Pawns can move 2 spaces forward if
         //    there are no pieces between the pawn and the target square or on the target square,
         //    the pawn is in its starting rank
-        //moves.push_back(i, j+forward*2);
+        if (iB(j+forward*2) && !piece->has_moved && board[i][j+forward] == nullptr && board[i][j+forward*2] == nullptr)
+        {
+            moves.push_back(MyMove(file, rank, file, rank + forward*2));
+        }
 
         // Pawns can move 1 space forward if
         //    there are no pieces on the target square
@@ -454,16 +460,14 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
         // Pawns can perform En Passant if
         //    the previous move was a pawn advancing two squares
         //    the pawn is now adjacent to this pawn
-        //std::cout << game->moves.back() << std::endl;
+        //Move last_move = game->moves[game->moves.size() - 1];
+        //if (last_move)
 
 
 
       }
       else if (type == "King")
       {
-        if (piece->owner == current_player)
-          king = pair(i, j);
-
         // Kings can move 1 space in any direction if
         //     the target tile does not contain a friendly piece
         for (auto direction: KING_MOVES)
@@ -482,25 +486,121 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
         //    the king does not pass through a square that is attacked,
         //    the king is not in check,
         //    there are no pieces between the rook and the king
+        if (!piece->has_moved)
+        {
+          for (auto direction : CASTLING)
+          {
+            bool can_castle = true;
+            int fd, rd;
+            std::tie(fd, rd) = direction;
+
+            MyPiece* castle = board[i+fd][j+rd];
+            if (castle == nullptr || castle->has_moved)
+              can_castle = false;
+            else
+            {
+              for (int m = i; m <= i + fd; m++)
+              {
+                if (m < i + fd / 2 && attackboard[m][j] > 0 || (m != i && board[m][j] != nullptr))
+                {
+                  can_castle = false;
+                  break;
+                }
+              }
+            }
+            if (can_castle)
+            {
+              moves.push_back(MyMove(file, rank, file+fd, rank+rd));
+            }
+          }
+        }
+
       }
       else if (type == "Queen")
       {
         // Queens can move any number of spaces in any direction if
         //    there are no pieces between the Queen and the target space
+        for (auto direction: KING_MOVES)
+        {
+          for (int r = 1; r < 8; r++)
+          {
+            int fd, rd;
+            std::tie(fd, rd) = direction;
+            if (!iB(i+fd*r) || !iB(j+rd*r))
+              break;
+            auto *newloc = board[i+fd*r][j+rd*r];
+            if (newloc == nullptr)
+              moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+            else 
+            {
+              if (newloc->owner != current_player)
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+              break;
+            }
+          }
+        }
       }
       else if (type == "Knight")
       {
         // Knights can move in an L shape
+        for (auto direction: KNIGHT_MOVES)
+        {
+          int fd, rd;
+          std::tie(fd, rd) = direction;
+          if (!iB(i+fd) || !iB(j+rd))
+            continue;
+          auto *newloc = board[i+fd][j+rd];
+          if (newloc == nullptr || newloc->owner != current_player)
+            moves.push_back(MyMove(file, rank, file+fd, rank+rd));
+        }
       }
       else if (type == "Rook")
       {
         // Rooks can move any number of spaces across a rank or file if
         //    there are no pieces between it and the target square
+        for (auto direction: ROOK_MOVES)
+        {
+          for (int r = 1; r < 8; r++)
+          {
+            int fd, rd;
+            std::tie(fd, rd) = direction;
+            if (!iB(i+fd*r) || !iB(j+rd*r))
+              break;
+            auto *newloc = board[i+fd*r][j+rd*r];
+            if (newloc == nullptr)
+              moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+            else 
+            {
+              if (newloc->owner != current_player)
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+              break;
+            }
+          }
+        }
       }
       else if (type == "Bishop")
       {
         // Bishops can move diagonally if
         //    there are no pieces between it and the target
+        for (auto direction: BISHOP_MOVES)
+        {
+          for (int r = 1; r < 8; r++)
+          {
+            int fd, rd;
+            std::tie(fd, rd) = direction;
+            if (!iB(i+fd*r) || !iB(j+rd*r))
+              break;
+            auto *newloc = board[i+fd*r][j+rd*r];
+            if (newloc == nullptr)
+              moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+            else 
+            {
+              if (newloc->owner != current_player)
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+              break;
+            }
+          }
+        }
       }
     }
   
@@ -544,13 +644,10 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
     }
     std::cout << "  + - - - - - - - - +\n" << "    a b c d e f g h" << std::endl << std::endl;
 
-    std::cout<<attackboard[ki][kj] << std::endl;
-    std::cout<<successor.board[ki][kj]->type<<std::endl;
     if (attackboard[ki][kj] > 0)
     {
       moves.erase(moves.begin() + i);
       i--;
-      std::cout << "I'd be in check then..." << std::endl;
     }
   }
 
