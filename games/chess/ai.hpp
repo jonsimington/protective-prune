@@ -51,6 +51,7 @@ class State {
     int** attacked(int attacker) const;
     State(const Game &game);
     State(const State &original);
+    ~State();
     std::vector<MyMove> generate_moves(const Game &game) const;
     State RESULT(MyMove action) const;
     void print() const;

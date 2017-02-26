@@ -98,7 +98,7 @@ void AI::ended(bool won, const std::string& reason)
 /// </summary>
 /// <returns>Represents if you want to end your turn. True means end your turn, False means to keep your turn going and re-call this function.</returns>
 bool AI::run_turn()
-{  
+{   
     // Here is where you'll want to code your AI.
 
     // We've provided sample code that:
@@ -150,10 +150,6 @@ bool AI::run_turn()
         break;
       }
     }
-    //for (auto move : moves)
-    //{
-    //  std::cout << move.file << move.rank << " " << move.file2 << move.rank2 << " " << move.promotion << std::endl;
-    //}
 
     return true; // to signify we are done with our turn.
 }
@@ -382,6 +378,17 @@ State::State(const State& original)
   current_player = original.current_player;
 }
 
+State::~State()
+{
+  for (int i = 0; i < 8; i++)
+  {
+    for (int j = 0; j < 8; j++)
+      delete board[i][j];
+    delete[] board[i];
+  }
+  delete[] board;
+}
+
 
 std::vector<MyMove> State::generate_moves(const Game &game) const
 {
@@ -392,6 +399,7 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
 
 
   for (int i = 0; i < 8; i++)
+  {
     for (int j = 0; j < 8; j++)
     {
       if (board[i][j] == nullptr || board[i][j]->owner != current_player)
@@ -617,6 +625,14 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
         }
       }
     }
+  }
+
+  for (int i = 0; i < 8; i++)
+  {
+    delete[] attackboard[i];
+  }
+  delete[] attackboard;
+
   
   // All moves  must be validated such that
   //    they do not put their own king into check
@@ -624,7 +640,7 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
   {
     MyMove move = moves[i];
     State successor = RESULT(move);
-    int** attackboard = successor.attacked((current_player + 1) % 2);
+    attackboard = successor.attacked((current_player + 1) % 2);
     int ki, kj;
     bool found=false;
 
@@ -650,6 +666,12 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
       moves.erase(moves.begin() + i);
       i--;
     }
+
+    for (int i = 0; i < 8; i++)
+    {
+      delete[] attackboard[i];
+    }
+    delete[] attackboard;
   }
 
   return moves;
@@ -657,22 +679,24 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
 
 State State::RESULT(MyMove action) const
 {
-
   int file = action.file - 'a';
   int rank = action.rank - 1;
   int file2 = action.file2 - 'a';
   int rank2 = action.rank2 - 1;
 
   MyPiece *oldPiece = board[file][rank];
-  MyPiece *newPiece = new MyPiece((action.promotion != '\0' ? lengthen(action.promotion) : oldPiece->type), true, oldPiece->owner);
   
   State result(*this);
   
-  result.board[file2][rank2] = newPiece;
+  delete result.board[file2][rank2];
+  result.board[file2][rank2] = new MyPiece((action.promotion != '\0' ? lengthen(action.promotion) : oldPiece->type), true, oldPiece->owner);
+
+  delete result.board[file][rank];
   result.board[file][rank] = nullptr;
 
   if (action.move_type == "En Passant")
   {
+    delete result.board[file2][rank];
     result.board[file2][rank] = nullptr;
   }
   else if (action.move_type == "Castle")
@@ -681,7 +705,6 @@ State State::RESULT(MyMove action) const
     int new_rank = (rank2 == 1 ? 2 : 5);
     result.board[file2][new_rank] = castle;
   }
-
   return result;
 }
 
