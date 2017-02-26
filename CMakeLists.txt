@@ -85,3 +85,6 @@ else()
       set_target_properties(${PROG_NAME} PROPERTIES COMPILE_OPTIONS "-std=c++11")
    endif(UNIX OR MINGW)
 endif()
+
+#optimize speed
+set(CMAKE_CXX_FLAGS "-Os")

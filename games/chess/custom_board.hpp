@@ -27,6 +27,13 @@ const char RED_FG[] = {0x1b, '[', '0', ';', '3', '1', 'm'};
 const char BLACK_BG[] = "\033[40m";
 const char WHITE_BG[] = "\033[100m";
 
+const char KING[] = "King";
+const char QUEEN[] = "Queen";
+const char KNIGHT[] = "Knight";
+const char BISHOP[] = "Bishop";
+const char ROOK[] = "Rook";
+const char PAWN[] = "Pawn";
+
 const std::vector<pair> CARDINAL = {pair(0, 1), pair(0, -1), pair(1, 0), pair(-1, 0)};
 const std::vector<pair> ORDINAL = {pair(1, 1), pair(1, -1), pair(-1, 1), pair(-1, -1)};
 const std::vector<pair> PAWN_ATTACKS[2] = {{pair(1, 1), pair(-1, 1)}, {pair(1, -1), pair(-1, -1)}};
@@ -65,10 +72,13 @@ class State {
     std::vector<std::pair<int,int>> attacking(int i, int j) const;
     std::vector<std::pair<int, int>> attacked(int i, int j, int filedir, int rankdir, int range) const;
     int** attacked(int attacker) const;
+    bool in_check(int i, int j, int attacker) const;
+    bool in_check(const MyMove& action);
+
     State(const Game &game);
     State(const State &original);
     ~State();
-    std::vector<MyMove> generate_moves(const Game &game) const;
+    std::vector<MyMove> generate_moves(const Game &game);
     State* RESULT(MyMove action) const;
     void print() const;
 
