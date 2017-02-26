@@ -15,7 +15,7 @@ namespace chess
 
 
 ///////////////////////////MY UTILITY STUFF
-using pair = std::tuple<int, int>;
+using pair = std::pair<int, int>;
 
 bool iB(int i)
 {
@@ -139,7 +139,9 @@ bool AI::run_turn()
     }
     int i = rand() % moves.size();
     auto move = moves[i];
-    state.RESULT(move).print();
+    State* result = state.RESULT(move);
+    result->print();
+    delete result;
 
     for (auto piece : player->pieces)
     {
@@ -274,8 +276,7 @@ int** State::attacked(int attacker) const
       {
         for (pair tile: attacking(i, j))
         {
-          int file, rank;
-          std::tie(file, rank) = tile;
+          int file = tile.first; int rank = tile.second;
           b2[file][rank]++;
         }
       }
@@ -291,31 +292,32 @@ std::vector<pair> State::attacking(int i, int j) const
   std::vector<pair> const *moves;
   int range = 1;
   auto *piece = board[i][j];
+  std::string type = piece->type;
 
   if (piece == nullptr)
     return std::vector<pair>();
 
-  if (piece->type == "King")
+  if (type == "King")
   {
     moves = &KING_MOVES;
-  }if (piece->type == "Queen")
+  }else if (type == "Queen")
   {
     moves = &KING_MOVES;
     range = 8;
   }
-  if (piece->type == "Bishop")
+  else if (type == "Bishop")
   {
     moves = &BISHOP_MOVES;
     range = 8;
-  }if (piece->type == "Knight")
+  }else if (type == "Knight")
   {
     moves = &KNIGHT_MOVES;
     range = 1;
-  }if (piece->type == "Rook")
+  }else if (type == "Rook")
   {
     moves = &ROOK_MOVES;
     range = 8;
-  }if (piece->type == "Pawn")
+  }else if (type == "Pawn")
   {
     moves = &PAWN_ATTACKS[piece->owner];
   }
@@ -323,8 +325,7 @@ std::vector<pair> State::attacking(int i, int j) const
 
   for (auto direction: *moves)
   {
-    int fd, rd;
-    std::tie(fd, rd) = direction;
+    int fd = direction.first; int rd = direction.second;
     for (auto _attacked: attacked(i, j, fd, rd, range))
       _attacking.push_back(_attacked);
   }
@@ -493,8 +494,7 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
         //     the target tile does not contain a friendly piece
         for (auto direction: KING_MOVES)
         {
-          int fd, rd;
-          std::tie(fd, rd) = direction;
+          int fd = direction.first; int rd = direction.second;
           if (!iB(i+fd) || !iB(j+rd))
             continue;
           auto *newloc = board[i+fd][j+rd];
@@ -512,8 +512,7 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
           for (auto direction : CASTLING)
           {
             bool can_castle = true;
-            int fd, rd;
-            std::tie(fd, rd) = direction;
+            int fd = direction.first; int rd = direction.second;            
             int inc = fd > 0;
 
             MyPiece* castle = board[i+fd][j+rd];
@@ -546,8 +545,7 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
         {
           for (int r = 1; r < 8; r++)
           {
-            int fd, rd;
-            std::tie(fd, rd) = direction;
+            int fd = direction.first; int rd = direction.second;
             if (!iB(i+fd*r) || !iB(j+rd*r))
               break;
             auto *newloc = board[i+fd*r][j+rd*r];
@@ -567,8 +565,7 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
         // Knights can move in an L shape
         for (auto direction: KNIGHT_MOVES)
         {
-          int fd, rd;
-          std::tie(fd, rd) = direction;
+          int fd = direction.first; int rd = direction.second;
           if (!iB(i+fd) || !iB(j+rd))
             continue;
           auto *newloc = board[i+fd][j+rd];
@@ -584,8 +581,7 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
         {
           for (int r = 1; r < 8; r++)
           {
-            int fd, rd;
-            std::tie(fd, rd) = direction;
+            int fd = direction.first; int rd = direction.second;
             if (!iB(i+fd*r) || !iB(j+rd*r))
               break;
             auto *newloc = board[i+fd*r][j+rd*r];
@@ -608,8 +604,7 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
         {
           for (int r = 1; r < 8; r++)
           {
-            int fd, rd;
-            std::tie(fd, rd) = direction;
+            int fd = direction.first; int rd = direction.second;
             if (!iB(i+fd*r) || !iB(j+rd*r))
               break;
             auto *newloc = board[i+fd*r][j+rd*r];
@@ -639,8 +634,8 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
   for (int i = 0; i < moves.size(); i++)
   {
     MyMove move = moves[i];
-    State successor = RESULT(move);
-    attackboard = successor.attacked((current_player + 1) % 2);
+    State* successor = RESULT(move);
+    attackboard = successor->attacked((current_player + 1) % 2);
     int ki, kj;
     bool found=false;
 
@@ -650,7 +645,7 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
         break;
       for (int j = 0; j < 8; j++)
       {
-        MyPiece* p = successor.board[i][j];
+        MyPiece* p = successor->board[i][j];
         if (p != nullptr && p->type == "King" && p->owner == current_player)
         {
           ki = i;
@@ -672,12 +667,13 @@ std::vector<MyMove> State::generate_moves(const Game &game) const
       delete[] attackboard[i];
     }
     delete[] attackboard;
+    delete successor;
   }
 
   return moves;
 }
 
-State State::RESULT(MyMove action) const
+State* State::RESULT(MyMove action) const
 {
   int file = action.file - 'a';
   int rank = action.rank - 1;
@@ -686,24 +682,25 @@ State State::RESULT(MyMove action) const
 
   MyPiece *oldPiece = board[file][rank];
   
-  State result(*this);
+  State* result;
+  result = new State(*this);
   
-  delete result.board[file2][rank2];
-  result.board[file2][rank2] = new MyPiece((action.promotion != '\0' ? lengthen(action.promotion) : oldPiece->type), true, oldPiece->owner);
+  delete result->board[file2][rank2];
+  result->board[file2][rank2] = new MyPiece((action.promotion != '\0' ? lengthen(action.promotion) : oldPiece->type), true, oldPiece->owner);
 
-  delete result.board[file][rank];
-  result.board[file][rank] = nullptr;
+  delete result->board[file][rank];
+  result->board[file][rank] = nullptr;
 
   if (action.move_type == "En Passant")
   {
-    delete result.board[file2][rank];
-    result.board[file2][rank] = nullptr;
+    delete result->board[file2][rank];
+    result->board[file2][rank] = nullptr;
   }
   else if (action.move_type == "Castle")
   {
     MyPiece *castle = new MyPiece("Rook", true, oldPiece->owner);
     int new_rank = (rank2 == 1 ? 2 : 5);
-    result.board[file2][new_rank] = castle;
+    result->board[file2][new_rank] = castle;
   }
   return result;
 }
