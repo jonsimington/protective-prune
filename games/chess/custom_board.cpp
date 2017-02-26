@@ -1,6 +1,5 @@
 #include "custom_board.hpp"
 
-
 #include <cmath>
 
 namespace cpp_client
@@ -19,6 +18,37 @@ char shorten(std::string name)
   if (name == "Knight")
     return 'N';
   return name[0];
+}
+
+std::string unicode(char repr)
+{
+  switch(repr) {
+    case 'n':
+      return "\u2658";
+    case 'k':
+      return "\u2654";
+    case 'q':
+      return "\u2655";
+    case 'r':
+      return "\u2656";
+    case 'p':
+      return "\u2659";
+    case 'b':
+      return "\u2657";
+    case 'N':
+      return "\u265E";
+    case 'K':
+      return "\u265A";
+    case 'Q':
+      return "\u265B";
+    case 'R':
+      return "\u265C";
+    case 'P':
+      return "\u265F";
+    case 'B':
+      return "\u265D";
+  }
+  return " ";
 }
 
 std::string lengthen(char name)
@@ -518,17 +548,18 @@ void State::print() const
 {
   for (int i = 7; i >= 0; i--)
   {
-    std::cout << i + 1 << " | ";
+    std::cout << i + 1 << " |";
     for (int j = 0; j < 8; j++)
     {
+      std::cout << (((i + j) % 2 == 1) ? WHITE_BG : BLACK_BG);
       if (board[j][i] == nullptr)
-        std::cout << ". ";
+        std::cout << "  ";
       else
-        std::cout << (char)(board[j][i]->owner == 0 ? (shorten(board[j][i]->type)) : std::tolower(shorten(board[j][i]->type)))  << " ";
+        std::cout << unicode((char)(board[j][i]->owner == 0 ? (shorten(board[j][i]->type)) : std::tolower(shorten(board[j][i]->type)))) << " ";
     }
-    std::cout << "|" << std::endl;
+    std::cout << WHITE_FG << "|" << std::endl;
   }
-  std::cout << "  + - - - - - - - - +\n" << "    a b c d e f g h" << std::endl << std::endl;
+  std::cout << "  +----------------+\n" << "    a b c d e f g h" << std::endl << std::endl;
 }
 
 

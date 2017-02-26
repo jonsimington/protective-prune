@@ -65,26 +65,19 @@ bool AI::run_turn()
     //    3) prints how much time remaining this AI has to calculate moves
     //    4) makes a random (and probably invalid) move.
 
-    // 1) print the board to the console
-    print_current_board();
-
     // 2) print the opponent's last move to the console
     if(game->moves.size() > 0)
     {
         std::cout << "Opponent's Last Move: '" << game->moves[game->moves.size() - 1]->san << "'" << std::endl;
     }
 
-
     // 3) print how much time remaining this AI has to calculate moves
     std::cout << "Time Remaining: " << player->time_remaining << " ns" << std::endl;
 
     chess::Piece p = player->pieces[rand() % player->pieces.size()];
-    //while (p->type != "Pawn")
-    //{
-    //    p = player->pieces[rand() % player->pieces.size()];
-    //}
-    //p->move(p->file, p->rank + player->rank_direction);
+
     State state(game);
+    state.print();
 
 
 

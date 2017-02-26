@@ -21,6 +21,12 @@ const std::string promotions[4] = {"Rook", "Knight", "Bishop", "Queen"};
 
 const int LR[2] = {-1, 1};
 
+const char BLUE_FG[] = { 0x1b, '[', '0', ';', '3', '4', 'm', 0 };
+const char WHITE_FG[] = { 0x1b, '[', '0', ';', '3', '9', 'm', 0 };
+const char RED_FG[] = {0x1b, '[', '0', ';', '3', '1', 'm'};
+const char BLACK_BG[] = "\033[40m";
+const char WHITE_BG[] = "\033[100m";
+
 const std::vector<pair> CARDINAL = {pair(0, 1), pair(0, -1), pair(1, 0), pair(-1, 0)};
 const std::vector<pair> ORDINAL = {pair(1, 1), pair(1, -1), pair(-1, 1), pair(-1, -1)};
 const std::vector<pair> PAWN_ATTACKS[2] = {{pair(1, 1), pair(-1, 1)}, {pair(1, -1), pair(-1, -1)}};
