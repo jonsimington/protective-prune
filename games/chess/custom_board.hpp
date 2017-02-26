@@ -69,9 +69,6 @@ class State {
     MyPiece ***board;
     bool current_player;
   public:
-    std::vector<std::pair<int,int>> attacking(int i, int j) const;
-    std::vector<std::pair<int, int>> attacked(int i, int j, int filedir, int rankdir, int range) const;
-    int** attacked(int attacker) const;
     bool in_check(int i, int j, int attacker) const;
     bool in_check(const MyMove& action);
 
