@@ -11,6 +11,8 @@
 #include "../../joueur/src/base_ai.hpp"
 #include "../../joueur/src/attr_wrapper.hpp"
 
+//#include "custom_board.hpp"
+
 // You can add additional #includes here
 
 namespace cpp_client
@@ -18,6 +20,40 @@ namespace cpp_client
 
 namespace chess
 {
+
+
+class MyPiece {
+    public:
+        std::string type;
+        bool has_moved;
+        bool owner;
+        MyPiece(const std::string _type, const bool _has_moved, const bool _owner) : type(_type), has_moved(_has_moved), owner(_owner) {};
+};
+
+struct MyMove {
+    char file;
+    int rank;
+    char file2;
+    int rank2;
+    char promotion;
+    MyMove(char startingFile, int startingRank, char targetFile, int targetRank, char promotion_='\0'): rank(startingRank), file(startingFile), rank2(targetRank), file2(targetFile), promotion(promotion_) {};
+};
+
+class State {
+  private:
+    MyPiece ***board;
+    bool current_player;
+  public:
+    std::vector<std::tuple<int,int>> attacking(int i, int j) const;
+    std::tuple<int, int> * attacked(int i, int j, int filedir, int rankdir, int range) const;
+    int** attacked(int attacker) const;
+    State(const Game &game);
+    State(const State &original);
+    std::vector<MyMove> generate_moves(const Game &game) const;
+    State RESULT(MyMove action) const;
+    void print() const;
+
+};
 
 /// <summary>
 /// This is the header file for building your Chess AI
