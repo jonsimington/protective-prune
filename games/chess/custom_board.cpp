@@ -1,3 +1,9 @@
+////////////////////////////////////////////////////////////////////// 
+/// @file custom_board.cpp 
+/// @author Shawn McCormick CS5400
+/// @brief Implementation of classes for manipulating Chess states
+////////////////////////////////////////////////////////////////////// 
+
 #include "custom_board.hpp"
 
 #include <cmath>
@@ -8,18 +14,33 @@ namespace cpp_client
 namespace chess
 {
 
+// Types that pawns can be promoted to
+const std::vector<const char*> promotions = {&ROOK, &KNIGHT, &BISHOP, &QUEEN};
+
+// Bounds checking
 bool iB(int i)
 {
   return 0 <= i && i < 8;
 }
 
-char shorten(std::string name)
+// Get the character representation of the name
+const char* shorten(std::string name)
 {
-  if (name == KNIGHT)
-    return 'N';
-  return name[0];
+  if (name == "Knight")
+    return &KNIGHT;
+  else if (name == "King")
+    return &KING;
+  else if (name == "Queen")
+    return &QUEEN;
+  else if (name == "Bishop")
+    return &BISHOP;
+  else if (name == "Rook")
+    return &ROOK;
+  else if (name == "Pawn")
+    return &PAWN;
 }
 
+// Unicode chess pieces
 std::string unicode(char repr)
 {
   switch(repr) {
@@ -51,27 +72,28 @@ std::string unicode(char repr)
   return " ";
 }
 
-std::string lengthen(char name)
+// Lengthen a name
+std::string lengthen(const char* name)
 {
-  switch(name) {
-    case 'N':
-      return KNIGHT;
-    case 'K':
-      return KING;
-    case 'Q':
-      return QUEEN;
-    case 'R':
-      return ROOK;
-    case 'P':
-      return PAWN;
-    case 'B':
-      return BISHOP;
+  if (name == nullptr)
+    return "";
+  switch(*name) {
+    case KNIGHT:
+      return "Knight";
+    case KING:
+      return "King";
+    case QUEEN:
+      return "Queen";
+    case ROOK:
+      return "Rook";
+    case PAWN:
+      return "Pawn";
+    case BISHOP:
+      return "Bishop";
   }
-  //std::cout << "Unknown piece type " << name << std::endl;
   return "";
 
 }
-
 
 bool State::in_check(int i, int j, int attacker) const
 {
@@ -83,7 +105,7 @@ bool State::in_check(int i, int j, int attacker) const
     if (iB(file) && iB(rank))
     {
       auto* piece = board[file][rank];
-      if (piece != nullptr && piece->owner == attacker && piece->type == KNIGHT)
+      if (piece != nullptr && piece->owner == attacker && piece->type == &KNIGHT)
         return true;
     }
   }
@@ -96,7 +118,7 @@ bool State::in_check(int i, int j, int attacker) const
     if (iB(file) && iB(rank))
     {
       auto* piece = board[file][rank];
-      if (piece != nullptr && piece->owner == attacker && piece->type == PAWN)
+      if (piece != nullptr && piece->owner == attacker && piece->type == &PAWN)
         return true;
     }
   }
@@ -117,7 +139,7 @@ bool State::in_check(int i, int j, int attacker) const
       {
         if (piece->owner == attacker)
         {
-          if ((range == 1 && piece->type == KING) || (piece->type == QUEEN) || (piece->type ==  BISHOP && (abs(fd + rd) == 2 || fd + rd == 0)) || (piece->type == ROOK && abs(fd + rd) == 1))
+          if ((range == 1 && piece->type == &KING) || (piece->type == &QUEEN) || (piece->type == &BISHOP && (abs(fd + rd) == 2 || fd + rd == 0)) || (piece->type == &ROOK && abs(fd + rd) == 1))
           {
             return true;
           }
@@ -148,7 +170,7 @@ State::State(const Game& game)
   {
     int i = piece->file[0] - 'a';
     int j = piece->rank - 1;
-    board[i][j] = new MyPiece(piece->type, piece->has_moved, piece->owner == game->players[1]); 
+    board[i][j] = new MyPiece(shorten(piece->type), piece->has_moved, piece->owner == game->players[1]); 
   }
 
 }
@@ -187,7 +209,7 @@ State::~State()
 }
 
 
-std::vector<MyMove> State::generate_moves(const Game &game)
+std::vector<MyMove> State::ACTIONS(const Game &game)
 {
   // string in SAN
   std::vector<MyMove> moves;
@@ -201,14 +223,14 @@ std::vector<MyMove> State::generate_moves(const Game &game)
         continue;
       }
       MyPiece* piece = board[i][j];
-      std::string type = piece->type;
+      const char* type = piece->type;
 
       const int forward = (current_player == 0 ? 1 : -1);
       char file = 'a' + i;
       int rank = j + 1;
 
       
-      if (type == PAWN)
+      if (type == &PAWN)
       {
         //((0, 1), (0, 2), (0, 3), (1, 1), (-1, 1))
         // Pawns can move 2 spaces forward if
@@ -229,7 +251,7 @@ std::vector<MyMove> State::generate_moves(const Game &game)
           {
             for (auto promotion : promotions)
             {
-              moves.push_back(MyMove(file, rank, file, rank + forward, shorten(promotion)));
+              moves.push_back(MyMove(file, rank, file, rank + forward, promotion));
             }
           }
           else
@@ -249,9 +271,9 @@ std::vector<MyMove> State::generate_moves(const Game &game)
               //    if they advance to the final rank
               if (j + forward == 0 || j + forward == 7)
               {
-                for (std::string promotion : promotions)
+                for (auto promotion : promotions)
                 {
-                  moves.push_back(MyMove(file, rank, file+dir, rank+forward, shorten(promotion)));
+                  moves.push_back(MyMove(file, rank, file+dir, rank+forward, promotion));
                 }
               }
               else
@@ -270,10 +292,10 @@ std::vector<MyMove> State::generate_moves(const Game &game)
           Move last_move = game->moves.back();
           if (last_move->to_rank == rank && abs((int)(last_move->to_file[0] - 'a') - i) == 1)
           {
-            if (abs(last_move->to_rank - last_move->from_rank) == 2 && last_move->piece->type == PAWN)
+            if (abs(last_move->to_rank - last_move->from_rank) == 2 && last_move->piece->type == &PAWN)
             {
               int dir = last_move->to_file[0] - file;
-              moves.push_back(MyMove(file, rank, file+dir, rank+forward, '\0', "En Passant"));
+              moves.push_back(MyMove(file, rank, file+dir, rank+forward, 0, "En Passant"));
             }
           }
         }
@@ -281,10 +303,10 @@ std::vector<MyMove> State::generate_moves(const Game &game)
 
 
       }
-      else if (type == KING)
+      else if (type == &KING)
       {
         // Kings can move 1 space in any direction if
-        //     the target tile does not contain a friendly piece
+        //    the target square is not a piece owned by the player
         for (auto direction: KING_MOVES)
         {
           int fd = direction.first; int rd = direction.second;
@@ -299,7 +321,8 @@ std::vector<MyMove> State::generate_moves(const Game &game)
         //    both it and the castling rook have not moved,
         //    the king does not pass through a square that is attacked,
         //    the king is not in check,
-        //    there are no pieces between the rook and the king
+        //    there are no pieces between the rook and the king,
+        //    the target square is not a piece owned by the player
         if (!piece->has_moved)
         {
           for (auto direction : CASTLING)
@@ -324,16 +347,17 @@ std::vector<MyMove> State::generate_moves(const Game &game)
             }
             if (can_castle)
             {
-              moves.push_back(MyMove(file, rank, file + (inc ? 2 : -3), rank+rd, '\0', "Castle"));
+              moves.push_back(MyMove(file, rank, file + (inc ? 2 : -3), rank+rd, 0, "Castle"));
             }
           }
         }
 
       }
-      else if (type == QUEEN)
+      else if (type == &QUEEN)
       {
         // Queens can move any number of spaces in any direction if
-        //    there are no pieces between the Queen and the target space
+        //    there are no pieces between the Queen and the target square,
+        //    the target square is not a piece owned by the player
         for (auto direction: KING_MOVES)
         {
           for (int r = 1; r < 8; r++)
@@ -353,9 +377,10 @@ std::vector<MyMove> State::generate_moves(const Game &game)
           }
         }
       }
-      else if (type == KNIGHT)
+      else if (type == &KNIGHT)
       {
-        // Knights can move in an L shape
+        // Knights can move in an L shape if
+        //    the target square is not a piece owned by the player
         for (auto direction: KNIGHT_MOVES)
         {
           int fd = direction.first; int rd = direction.second;
@@ -366,10 +391,11 @@ std::vector<MyMove> State::generate_moves(const Game &game)
             moves.push_back(MyMove(file, rank, file+fd, rank+rd));
         }
       }
-      else if (type == ROOK)
+      else if (type == &ROOK)
       {
         // Rooks can move any number of spaces across a rank or file if
-        //    there are no pieces between it and the target square
+        //    there are no pieces between the rook and the target square,
+        //    the target square is not a piece owned by the player
         for (auto direction: ROOK_MOVES)
         {
           for (int r = 1; r < 8; r++)
@@ -389,10 +415,11 @@ std::vector<MyMove> State::generate_moves(const Game &game)
           }
         }
       }
-      else if (type == BISHOP)
+      else if (type == &BISHOP)
       {
         // Bishops can move diagonally if
-        //    there are no pieces between it and the target
+        //    there are no pieces between the bishop and the target
+        //    the target square is not a piece owned by the player
         for (auto direction: BISHOP_MOVES)
         {
           for (int r = 1; r < 8; r++)
@@ -430,7 +457,7 @@ std::vector<MyMove> State::generate_moves(const Game &game)
   return moves;
 }
 
-State* State::RESULT(MyMove action) const
+State* State::RESULT(const MyMove& action) const
 {
   int file = action.file - 'a';
   int rank = action.rank - 1;
@@ -443,7 +470,7 @@ State* State::RESULT(MyMove action) const
   result = new State(*this);
   
   delete result->board[file2][rank2];
-  result->board[file2][rank2] = new MyPiece((action.promotion != '\0' ? lengthen(action.promotion) : oldPiece->type), true, oldPiece->owner);
+  result->board[file2][rank2] = new MyPiece((action.promotion != nullptr ? action.promotion : oldPiece->type), true, oldPiece->owner);
 
   delete result->board[file][rank];
   result->board[file][rank] = nullptr;
@@ -455,7 +482,7 @@ State* State::RESULT(MyMove action) const
   }
   else if (action.move_type == "Castle")
   {
-    MyPiece *castle = new MyPiece(ROOK, true, oldPiece->owner);
+    MyPiece *castle = new MyPiece(&ROOK, true, oldPiece->owner);
     int new_rank = (rank2 == 1 ? 2 : 5);
     result->board[file2][new_rank] = castle;
   }
@@ -464,16 +491,18 @@ State* State::RESULT(MyMove action) const
 
 bool State::in_check(const MyMove& action)
 {
+  // Convert the files and ranks to [0,7]
   int file = action.file - 'a';
   int rank = action.rank - 1;
   int file2 = action.file2 - 'a';
   int rank2 = action.rank2 - 1;
 
+  // Apply the new board state
   MyPiece *oldPiece = board[file][rank];  
   std::vector<std::pair<pair, MyPiece*>> preserved;
 
   preserved.push_back(std::pair<pair, MyPiece*>(pair(file2, rank2), board[file2][rank2]));
-  board[file2][rank2] = new MyPiece((action.promotion != '\0' ? lengthen(action.promotion) : oldPiece->type), true, oldPiece->owner);
+  board[file2][rank2] = new MyPiece((action.promotion != nullptr ? action.promotion: oldPiece->type), true, oldPiece->owner);
 
   preserved.push_back(std::pair<pair, MyPiece*>(pair(file, rank), board[file][rank]));
   board[file][rank] = nullptr;
@@ -485,7 +514,7 @@ bool State::in_check(const MyMove& action)
   }
   else if (action.move_type == "Castle")
   {
-    MyPiece *castle = new MyPiece(ROOK, true, oldPiece->owner);
+    MyPiece *castle = new MyPiece(&ROOK, true, oldPiece->owner);
     int new_rank = (rank2 == 1 ? 2 : 5);
     preserved.push_back(std::pair<pair, MyPiece*>(pair(file2, new_rank), board[file2][new_rank]));
     board[file2][new_rank] = castle;
@@ -503,7 +532,7 @@ bool State::in_check(const MyMove& action)
     for (int j = 0; j < 8; j++)
     {
       MyPiece* p = board[i][j];
-      if (p != nullptr && p->type == KING && p->owner == current_player)
+      if (p != nullptr && p->type == &KING && p->owner == current_player)
       {
         ki = i;
         kj = j;
@@ -539,11 +568,16 @@ void State::print() const
       if (board[j][i] == nullptr)
         std::cout << "  ";
       else
-        std::cout << unicode((char)(board[j][i]->owner == 0 ? (shorten(board[j][i]->type)) : std::tolower(shorten(board[j][i]->type)))) << " ";
+        std::cout << unicode((char)(board[j][i]->owner == 0 ? (*(board[j][i]->type)) : std::tolower(*(board[j][i]->type)))) << " ";
     }
     std::cout << WHITE_FG << "|" << std::endl;
   }
   std::cout << "  +----------------+\n" << "    a b c d e f g h" << std::endl << std::endl;
+}
+
+const MyPiece* State::getPiece(const char& file, const int& rank) const
+{
+  return board[static_cast<int>(file - 'a')][rank - 1];
 }
 
 

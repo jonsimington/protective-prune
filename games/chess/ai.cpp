@@ -77,12 +77,11 @@ bool AI::run_turn()
     chess::Piece p = player->pieces[rand() % player->pieces.size()];
 
     State state(game);
-    //state.print();
+
+    state.print();
 
 
-
-    std::vector<MyMove> moves = state.generate_moves(game);
-
+    std::vector<MyMove> moves = state.ACTIONS(game);
     if (moves.size() == 0)
     {
       std::cout << "I can't find any valid moves :(" << std::endl;
@@ -90,16 +89,28 @@ bool AI::run_turn()
     }
     int i = rand() % moves.size();
     auto move = moves[i];
-    /*State* result = state.RESULT(move);
+
+    // Print out all possible moves for the moving piece
+    const MyPiece* moved = state.getPiece(move.file,move.rank);
+    std::cout<<"Moving " << lengthen(moved->type) <<" at " << move.file << move.rank << " to random choice from [";
+    for (auto m2: moves)
+    {
+      if (move.file == m2.file && move.rank == m2.rank)
+      {
+        std::cout << m2.file2 << m2.rank2 << (m2.promotion == nullptr ? "" : std::string(1, *(m2.promotion))) << (m2.move_type != "Move" ? m2.move_type : "") << ",";
+      }
+    }
+    std::cout << "]" << std::endl;
+
+    State* result = state.RESULT(move);
     result->print();
-    delete result;*/
+    delete result;
 
     for (auto piece : player->pieces)
     {
       if (piece->rank == move.rank && piece->file[0] == move.file)
       {
-        std::cout << move.file << move.rank << " " << move.file2 << move.rank2 << " " << move.promotion << std::endl;
-        piece->move(std::string(1, move.file2), move.rank2, lengthen(move.promotion));
+        piece->move(std::string(1, move.file2), move.rank2, lengthen((move.promotion)));
         break;
       }
     }
