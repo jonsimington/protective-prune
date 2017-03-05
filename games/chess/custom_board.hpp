@@ -13,7 +13,7 @@
 #include "move.hpp"
 #include "piece.hpp"
 #include "player.hpp"
-
+typedef unsigned long long U64;
 
 namespace cpp_client
 {
@@ -41,8 +41,6 @@ const char ROOK = 'R';
 const char PAWN = 'P';
 
 // Move directions available to units
-const std::vector<pair> CARDINAL = {pair(0, 1), pair(0, -1), pair(1, 0), pair(-1, 0)};
-const std::vector<pair> ORDINAL = {pair(1, 1), pair(1, -1), pair(-1, 1), pair(-1, -1)};
 const std::vector<pair> PAWN_ATTACKS[2] = {{pair(1, 1), pair(-1, 1)}, {pair(1, -1), pair(-1, -1)}};
 const std::vector<pair> KNIGHT_MOVES = {pair(2, 1), pair(2, -1), pair(-2, 1), pair(-2, -1), pair(1, 2), pair(1, -2), pair(-1, 2), pair(-1, -2)};
 const std::vector<pair> KING_MOVES = {pair(-1, -1), pair(-1, 0), pair(-1, 1), pair(0, -1), pair(0, 1), pair(1, -1), pair(1, 0), pair(1, 1)};
@@ -83,6 +81,50 @@ struct MyMove {
 };
 
 
+
+struct BitBoard
+{
+    U64 pieces;
+};
+
+const BitBoard RANK_1 = ;
+const BitBoard RANK_2 = ;
+const BitBoard RANK_3 = ;
+const BitBoard RANK_4 = ;
+const BitBoard RANK_5 = ;
+const BitBoard RANK_6 = ;
+const BitBoard RANK_7 = ;
+const BitBoard FILE_A = ;
+const BitBoard FILE_B = ;
+const BitBoard FILE_C = ;
+const BitBoard FILE_D = ;
+const BitBoard FILE_E = ;
+const BitBoard FILE_F = ;
+const BitBoard FILE_G = ;
+
+struct Board
+{
+    BitBoard whitePawns;
+    BitBoard whiteRooks;
+    BitBoard whiteKnights;
+    BitBoard whiteBishops;
+    BitBoard whiteQueens;
+    BitBoard whiteKing;
+
+    BitBoard blackPawns;
+    BitBoard blackRooks;
+    BitBoard blackKnights;
+    BitBoard blackBishops;
+    BitBoard blackQueens;
+    BitBoard blackKing;
+
+    BitBoard whitePieces;
+    BitBoard blackPieces;
+    BitBoard pieces;
+
+    BitBoard(const Game& game);
+};
+
 ////////////////////////////////////////////////////////////////////// 
 /// @class State 
 /// @brief Simplified internal representation of a Chess gamestate
@@ -90,6 +132,7 @@ struct MyMove {
 class State {
   private:
     MyPiece ***board; // A 2d board, containing pointers to Chess pieces
+    Board bitboard;
     bool current_player; // The player whose turn it is to make a move: {0 white, 1 black}
 
   public:
