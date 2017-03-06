@@ -170,7 +170,10 @@ State::State(const Game& game)
   {
     int i = piece->file[0] - 'a';
     int j = piece->rank - 1;
-    board[i][j] = new MyPiece(shorten(piece->type), piece->has_moved, piece->owner == game->players[1]); 
+    bool actually_moved = piece->has_moved;
+    if (piece->type == "Pawn" && piece->rank != (piece->owner == game->players[0] ? 2 : 6))
+      actually_moved = true;
+    board[i][j] = new MyPiece(shorten(piece->type), actually_moved, piece->owner == game->players[1]); 
   }
 
 }
@@ -213,6 +216,23 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
 {
   // string in SAN
   std::vector<MyMove> moves;
+
+  // Determine ability to castle & en passant
+  int j = 0;
+  for (int i = 0; i < 4; i++)
+  {
+    while(game->fen[j++] != ' ');
+    i++;
+  }
+
+  std::string token = game->fen.substr(j);
+  std::string castle = token.substr(0, token.find(" "));
+  while(game->fen[j++] != ' ');
+  token = game->fen.substr(j);
+  std::string enPassant = token.substr(0, token.find(" "));
+  std::cout<<game->fen<<std::endl;
+  std::cout<<castle<<std::endl;
+  std::cout <<enPassant<<std::endl;
 
   for (int i = 0; i < 8; i++)
   {
@@ -287,17 +307,13 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
         // Pawns can perform En Passant if
         //    the previous move was a pawn advancing two squares
         //    the pawn is now adjacent to this pawn
-        if (game->moves.size() > 0)
+        if (enPassant[0] != '-')
         {
-          Move last_move = game->moves.back();
-          if (last_move->to_rank == rank && abs((int)(last_move->to_file[0] - 'a') - i) == 1)
-          {
-            if (abs(last_move->to_rank - last_move->from_rank) == 2 && last_move->piece->type == &PAWN)
+          if ((enPassant[1] - '0' - rank - forward) == 0 && abs((int)(enPassant[0] - 'a') - i) == 1)
             {
-              int dir = last_move->to_file[0] - file;
+              int dir = enPassant[0] - file;
               moves.push_back(MyMove(file, rank, file+dir, rank+forward, 0, "En Passant"));
             }
-          }
         }
 
 
