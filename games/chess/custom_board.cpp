@@ -171,6 +171,7 @@ State::State(const Game& game)
     int i = piece->file[0] - 'a';
     int j = piece->rank - 1;
     bool actually_moved = piece->has_moved;
+    // Pawns not in their starting rank have already moved
     if (piece->type == "Pawn" && piece->rank != (piece->owner == game->players[0] ? 2 : 6))
       actually_moved = true;
     board[i][j] = new MyPiece(shorten(piece->type), actually_moved, piece->owner == game->players[1]); 
@@ -230,10 +231,8 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
   while(game->fen[j++] != ' ');
   token = game->fen.substr(j);
   std::string enPassant = token.substr(0, token.find(" "));
-  std::cout<<game->fen<<std::endl;
-  std::cout<<castle<<std::endl;
-  std::cout <<enPassant<<std::endl;
 
+  // Iterate through the entire board
   for (int i = 0; i < 8; i++)
   {
     for (int j = 0; j < 8; j++)
@@ -343,6 +342,14 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
         {
           for (auto direction : CASTLING)
           {
+            char side = (direction.first == -4 ? 'Q' : 'K');
+            if (piece->owner == 1)
+            {
+              side = std::tolower(side);
+            }
+            if (castle.find(side) > 3)
+              continue;
+
             bool can_castle = true;
             int fd = direction.first; int rd = direction.second;            
             int inc = fd > 0;
@@ -352,18 +359,31 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
               can_castle = false;
             else
             {
-              for (int m = i; (inc ? m <= i + fd : m >= i + fd); (inc ? m++ : m--))
-              {
-                if ((inc ? m <= i + 2 : m >= i - 3) && !in_check(m, j, (current_player + 1)%2) || (m != i && board[m][j] != nullptr))
+              int m = i; 
+              if (inc)
+                while(m <= i + 2)
                 {
-                  can_castle = false;
-                  break;
+                  if (in_check(m, j, (current_player + 1)%2) || (m != i && board[m][j] != nullptr))
+                  {
+                    can_castle = false;
+                    break;
+                  }
+                  m++;
                 }
-              }
+              else
+                while(m >= i - 3)
+                {
+                  if ((m >= i - 2 && in_check(m, j, (current_player + 1)%2)) || (m != i && board[m][j] != nullptr))
+                  {
+                    can_castle = false;
+                    break;
+                  }
+                  m--;
+                }
             }
             if (can_castle)
             {
-              moves.push_back(MyMove(file, rank, file + (inc ? 2 : -3), rank+rd, 0, "Castle"));
+              moves.push_back(MyMove(file, rank, file + (inc ? 2 : -2), rank+rd, 0, "Castle"));
             }
           }
         }
