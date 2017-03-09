@@ -251,7 +251,6 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
       
       if (type == &PAWN)
       {
-        //((0, 1), (0, 2), (0, 3), (1, 1), (-1, 1))
         // Pawns can move 2 spaces forward if
         //    there are no pieces between the pawn and the target square or on the target square,
         //    the pawn is in its starting rank
