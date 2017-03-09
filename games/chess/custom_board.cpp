@@ -170,7 +170,11 @@ State::State(const Game& game)
   {
     int i = piece->file[0] - 'a';
     int j = piece->rank - 1;
-    board[i][j] = new MyPiece(shorten(piece->type), piece->has_moved, piece->owner == game->players[1]); 
+    bool actually_moved = piece->has_moved;
+    // Pawns not in their starting rank have already moved
+    if (piece->type == "Pawn" && piece->rank != (piece->owner == game->players[0] ? 2 : 6))
+      actually_moved = true;
+    board[i][j] = new MyPiece(shorten(piece->type), actually_moved, piece->owner == game->players[1]); 
   }
 
 }
@@ -214,6 +218,21 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
   // string in SAN
   std::vector<MyMove> moves;
 
+  // Determine ability to castle & en passant
+  int j = 0;
+  for (int i = 0; i < 4; i++)
+  {
+    while(game->fen[j++] != ' ');
+    i++;
+  }
+
+  std::string token = game->fen.substr(j);
+  std::string castle = token.substr(0, token.find(" "));
+  while(game->fen[j++] != ' ');
+  token = game->fen.substr(j);
+  std::string enPassant = token.substr(0, token.find(" "));
+
+  // Iterate through the entire board
   for (int i = 0; i < 8; i++)
   {
     for (int j = 0; j < 8; j++)
@@ -232,7 +251,6 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
       
       if (type == &PAWN)
       {
-        //((0, 1), (0, 2), (0, 3), (1, 1), (-1, 1))
         // Pawns can move 2 spaces forward if
         //    there are no pieces between the pawn and the target square or on the target square,
         //    the pawn is in its starting rank
@@ -287,17 +305,13 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
         // Pawns can perform En Passant if
         //    the previous move was a pawn advancing two squares
         //    the pawn is now adjacent to this pawn
-        if (game->moves.size() > 0)
+        if (enPassant[0] != '-')
         {
-          Move last_move = game->moves.back();
-          if (last_move->to_rank == rank && abs((int)(last_move->to_file[0] - 'a') - i) == 1)
-          {
-            if (abs(last_move->to_rank - last_move->from_rank) == 2 && last_move->piece->type == &PAWN)
+          if ((enPassant[1] - '0' - rank - forward) == 0 && abs((int)(enPassant[0] - 'a') - i) == 1)
             {
-              int dir = last_move->to_file[0] - file;
+              int dir = enPassant[0] - file;
               moves.push_back(MyMove(file, rank, file+dir, rank+forward, 0, "En Passant"));
             }
-          }
         }
 
 
@@ -327,6 +341,14 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
         {
           for (auto direction : CASTLING)
           {
+            char side = (direction.first == -4 ? 'Q' : 'K');
+            if (piece->owner == 1)
+            {
+              side = std::tolower(side);
+            }
+            if (castle.find(side) > 3)
+              continue;
+
             bool can_castle = true;
             int fd = direction.first; int rd = direction.second;            
             int inc = fd > 0;
@@ -336,18 +358,31 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
               can_castle = false;
             else
             {
-              for (int m = i; (inc ? m <= i + fd : m >= i + fd); (inc ? m++ : m--))
-              {
-                if ((inc ? m <= i + 2 : m >= i - 3) && !in_check(m, j, (current_player + 1)%2) || (m != i && board[m][j] != nullptr))
+              int m = i; 
+              if (inc)
+                while(m <= i + 2)
                 {
-                  can_castle = false;
-                  break;
+                  if (in_check(m, j, (current_player + 1)%2) || (m != i && board[m][j] != nullptr))
+                  {
+                    can_castle = false;
+                    break;
+                  }
+                  m++;
                 }
-              }
+              else
+                while(m >= i - 3)
+                {
+                  if ((m >= i - 2 && in_check(m, j, (current_player + 1)%2)) || (m != i && board[m][j] != nullptr))
+                  {
+                    can_castle = false;
+                    break;
+                  }
+                  m--;
+                }
             }
             if (can_castle)
             {
-              moves.push_back(MyMove(file, rank, file + (inc ? 2 : -3), rank+rd, 0, "Castle"));
+              moves.push_back(MyMove(file, rank, file + (inc ? 2 : -2), rank+rd, 0, "Castle"));
             }
           }
         }
