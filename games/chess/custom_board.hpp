@@ -87,6 +87,8 @@ struct BitBoard
     U64 pieces;
 };
 
+
+const U64 universe = 0xffffffffffffffffULL;
 const BitBoard RANK_1 = ;
 const BitBoard RANK_2 = ;
 const BitBoard RANK_3 = ;
@@ -124,6 +126,13 @@ struct Board
 
     BitBoard(const Game& game);
 };
+
+U64 rol(U64 x, int s) { return _rotl64(x, s); };
+U64 ror(U64 x, int s) { return _rotr64(x, s); };
+
+U64 genShift(U64 x, int s) {
+   return (s > 0) ? (x << s) : (x >> -s);
+}
 
 ////////////////////////////////////////////////////////////////////// 
 /// @class State 
