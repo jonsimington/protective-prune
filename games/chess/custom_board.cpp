@@ -14,6 +14,20 @@ namespace cpp_client
 namespace chess
 {
 
+// Bitboard operations
+U64 rol(U64 x, int s) { 
+    if (!s) return x;
+    return (x << s) | (x >>(64-s));
+};
+U64 ror(U64 x, int s) { 
+    if (!s) return x;
+    return (x >> s) | (x <<(64-s));
+};
+
+U64 genShift(U64 x, int s) {
+   return (s > 0) ? (x << s) : (x >> -s);
+};
+
 // Types that pawns can be promoted to
 const std::vector<const char*> promotions = {&ROOK, &KNIGHT, &BISHOP, &QUEEN};
 
