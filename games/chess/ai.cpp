@@ -57,21 +57,6 @@ void AI::ended(bool won, const std::string& reason)
 /// <returns>Represents if you want to end your turn. True means end your turn, False means to keep your turn going and re-call this function.</returns>
 bool AI::run_turn()
 {   
-    // Here is where you'll want to code your AI.
-
-    // We've provided sample code that:
-    //    1) prints the board to the console
-    //    2) prints the opponent's last move to the console
-    //    3) prints how much time remaining this AI has to calculate moves
-    //    4) makes a random (and probably invalid) move.
-
-    // 2) print the opponent's last move to the console
-    if(game->moves.size() > 0)
-    {
-        std::cout << "Opponent's Last Move: '" << game->moves[game->moves.size() - 1]->san << "'" << std::endl;
-    }
-
-    // 3) print how much time remaining this AI has to calculate moves
     std::cout << "Time Remaining: " << player->time_remaining << " ns" << std::endl;
 
     chess::Piece p = player->pieces[rand() % player->pieces.size()];
@@ -81,26 +66,14 @@ bool AI::run_turn()
     state.print();
 
 
-    std::vector<MyMove> moves = state.ACTIONS(game);
+    std::vector<std::pair<MyMove, State*>> moves = state.ACTIONS(game);
     if (moves.size() == 0)
     {
       std::cout << "I can't find any valid moves :(" << std::endl;
       return true;
     }
     int i = rand() % moves.size();
-    auto move = moves[i];
-
-    // Print out all possible moves for the moving piece
-    const MyPiece* moved = state.getPiece(move.file,move.rank);
-    std::cout<<"Moving " << lengthen(moved->type) <<" at " << move.file << move.rank << " to random choice from [";
-    for (auto m2: moves)
-    {
-      if (move.file == m2.file && move.rank == m2.rank)
-      {
-        std::cout << m2.file2 << m2.rank2 << (m2.promotion == nullptr ? "" : std::string(1, *(m2.promotion))) << (m2.move_type != "Move" ? m2.move_type : "") << ",";
-      }
-    }
-    std::cout << "]" << std::endl;
+    auto move = moves[i].first;
 
     State* result = state.RESULT(move);
     result->print();

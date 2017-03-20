@@ -226,8 +226,7 @@ State::~State()
   delete[] board;
 }
 
-
-std::vector<MyMove> State::ACTIONS(const Game &game)
+std::vector<std::pair<MyMove, State*>> State::ACTIONS(const Game &game)
 {
   // string in SAN
   std::vector<MyMove> moves;
@@ -503,7 +502,14 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
     }
   }
 
-  return moves;
+  std::vector<std::pair<MyMove, State*>> successors;
+  for (auto move: moves)
+  {
+    std::pair<MyMove, State*> successor(move, RESULT(move));
+    successors.push_back(successor);
+  }
+
+  return successors;
 }
 
 State* State::RESULT(const MyMove& action) const
@@ -538,6 +544,33 @@ State* State::RESULT(const MyMove& action) const
   return result;
 }
 
+bool State::in_check() const
+{
+  // Find the king
+  int ki, kj;
+  bool found=false;
+
+  for (int i = 0; i < 8; i++)
+  {
+    if (found)
+      break;
+    for (int j = 0; j < 8; j++)
+    {
+      MyPiece* p = board[i][j];
+      if (p != nullptr && p->type == &KING && p->owner == current_player)
+      {
+        ki = i;
+        kj = j;
+        found = true;
+        break;
+      }
+    }
+  }
+
+  // Check if the king is in check
+  return in_check(ki, kj, current_player);
+}
+
 bool State::in_check(const MyMove& action)
 {
   // Convert the files and ranks to [0,7]
@@ -569,30 +602,11 @@ bool State::in_check(const MyMove& action)
     board[file2][new_rank] = castle;
   }
 
+  current_player = (current_player + 1) % 2;
 
-  // Find the king
-  int ki, kj;
-  bool found=false;
+  bool check = in_check();
 
-  for (int i = 0; i < 8; i++)
-  {
-    if (found)
-      break;
-    for (int j = 0; j < 8; j++)
-    {
-      MyPiece* p = board[i][j];
-      if (p != nullptr && p->type == &KING && p->owner == current_player)
-      {
-        ki = i;
-        kj = j;
-        found = true;
-        break;
-      }
-    }
-  }
-
-  // Check if the king is in check
-  bool check = in_check(ki, kj, (current_player + 1) % 2);
+  current_player = (current_player - 1) % 2;
   
   // Restore the board to its original state
   for (auto pr: preserved)
@@ -604,6 +618,41 @@ bool State::in_check(const MyMove& action)
   }
 
   return check;
+}
+
+int State::goal_reached(const Game& game, const int maxPlayer)
+{
+  if ((ACTIONS(game).size()) == 0)
+  {
+    if (in_check())
+    {
+      return -1000000 * (maxPlayer == current_player ? 1 : -1); // Checkmate
+    }
+    return -1000; // Draw
+  }
+  return 0; // Not a goal
+}
+
+int State::material_advantage(bool maxPlayer)
+{
+  int advantage = 0;
+  for (int i = 0; i < 8; i++)
+  {
+    for (int j = 0; j < 8; j++)
+    {
+      auto *piece = board[i][j];
+      if (piece != nullptr)
+        advantage += (piece.owner == maxPlayer ? 1 : -1) * value(piece->type);
+    }
+  }
+}
+
+float State::evaluate(bool maxPlayer)
+{
+  int goal = goal_reached(maxPlayer);
+  if (goal != 0)
+    return goal;
+  return material_advantage(maxPlayer);
 }
 
 void State::print() const

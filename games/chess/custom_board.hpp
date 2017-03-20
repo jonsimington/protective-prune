@@ -77,6 +77,7 @@ struct MyMove {
     std::string move_type; // Used to indicate special moves: {"En Passant", "Castle", "Move"}
 
     // Constructor for MyMove
+    MyMove();
     MyMove(char startingFile, int startingRank, char targetFile, int targetRank, const char* promotion_=0, std::string _move_type = "Move"): rank(startingRank), file(startingFile), rank2(targetRank), file2(targetFile), promotion(promotion_), move_type(_move_type) {};
 };
 
@@ -184,6 +185,19 @@ class State {
     // Returns true if the current_player's king is in check, else false
     bool in_check(const MyMove& action);
 
+    // Determine whether the current state is in check
+    // Returns true if the current_player's king is in check, else false
+    bool in_check() const;
+
+    // Determines whether the state is an end state; i.e. a stalemate or checkmate occurred
+    int goal_reached(const Game& game, const int maxPlayer);
+
+    // Material advantage of the current state
+    int material_advantage(bool maxPlayer);
+
+    // Perform heuristic on current state
+    float evaluate(bool maxPlayer);
+
     // Construct the State from the MMAI framework game state
     State(const Game &game);
 
@@ -197,7 +211,7 @@ class State {
     // Parameters:
     //      Game& game: The current game state; used to retrieve previous moves
     // Returns a vector of moves specifying which actions can be taken from the current state
-    std::vector<MyMove> ACTIONS(const Game &game);
+    std::vector<std::pair<MyMove, State*>> ACTIONS(const Game &game);
 
     // Successor generator
     // Parameters:
