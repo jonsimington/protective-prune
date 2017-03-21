@@ -13,7 +13,8 @@
 #include "move.hpp"
 #include "piece.hpp"
 #include "player.hpp"
-
+#include <algorithm>
+typedef unsigned long long U64;
 
 namespace cpp_client
 {
@@ -77,9 +78,86 @@ struct MyMove {
     std::string move_type; // Used to indicate special moves: {"En Passant", "Castle", "Move"}
 
     // Constructor for MyMove
+    MyMove() : move_type("None") {};
     MyMove(char startingFile, int startingRank, char targetFile, int targetRank, const char* promotion_=0, std::string _move_type = "Move"): rank(startingRank), file(startingFile), rank2(targetRank), file2(targetFile), promotion(promotion_), move_type(_move_type) {};
 };
 
+
+
+struct BitBoard
+{
+    U64 pieces;
+};
+
+
+const U64 universe = 0xffffffffffffffffULL;
+
+const U64 WHITE_PIECES[] = {
+        0x1000000000000000ULL, // King
+        0x0800000000000000ULL, // Queen
+        0x8100000000000000ULL, // Rook
+        0x2400000000000000ULL, // Bishop
+        0x4200000000000000ULL, // Knight
+        0x00ff000000000000ULL, // Pawn
+};
+
+const U64 BLACK_PIECES[] = {
+        0x0000000000000010ULL, // King
+        0x0000000000000008ULL, // Queen
+        0x0000000000000081ULL, // Rook
+        0x0000000000000024ULL, // Bishop
+        0x0000000000000042ULL, // Knight
+        0x000000000000ff00ULL, // Pawn
+};
+
+const U64 RANKS[] = {
+        0xff00000000000000ULL, 
+        0x00ff000000000000ULL, 
+        0x0000ff0000000000ULL, 
+        0x000000ff00000000ULL, 
+        0x00000000ff000000ULL, 
+        0x0000000000ff0000ULL, 
+        0x000000000000ff00ULL,
+        0x00000000000000ffULL,
+};
+
+const U64 FILES[] = {
+        0x0101010101010101ULL,
+        0x0202020202020202ULL,
+        0x0404040404040404ULL,
+        0x0808080808080808ULL,
+        0x1010101010101010ULL,
+        0x2020202020202020ULL,
+        0x4040404040404040ULL,
+        0x8080808080808080ULL,
+};
+
+struct Board
+{
+    BitBoard whitePawns;
+    BitBoard whiteRooks;
+    BitBoard whiteKnights;
+    BitBoard whiteBishops;
+    BitBoard whiteQueens;
+    BitBoard whiteKing;
+
+    BitBoard blackPawns;
+    BitBoard blackRooks;
+    BitBoard blackKnights;
+    BitBoard blackBishops;
+    BitBoard blackQueens;
+    BitBoard blackKing;
+
+    BitBoard whitePieces;
+    BitBoard blackPieces;
+    BitBoard pieces;
+
+};
+
+U64 rol(U64 x, int s);
+U64 ror(U64 x, int s);
+
+U64 genShift(U64 x, int s);
 
 ////////////////////////////////////////////////////////////////////// 
 /// @class State 
@@ -88,7 +166,9 @@ struct MyMove {
 class State {
   private:
     MyPiece ***board; // A 2d board, containing pointers to Chess pieces
+    Board bitboard;
     bool current_player; // The player whose turn it is to make a move: {0 white, 1 black}
+    int last_capture; // The number of moves since the last pawn move or piece capture
 
   public:
     // Determine whether the target rank and file are in check by attacker
@@ -107,6 +187,26 @@ class State {
     // Returns true if the current_player's king is in check, else false
     bool in_check(const MyMove& action);
 
+    // Determine whether the current state is in check
+    // Returns true if the current_player's king is in check, else false
+    bool in_check() const;
+
+    // Determines whether the given state is a draw
+    bool stalemate() const;
+
+    // Determines whether the state is an end state; i.e. a stalemate or checkmate occurred
+    int goal_reached(const Game& game);
+
+    // Material advantage of the current state
+    int material_advantage(bool maxPlayer);
+
+    // Perform heuristic on current state
+    float evaluate(const Game& game);
+
+    // Value of piece types
+    int value(const char* pieceType) const;
+
+
     // Construct the State from the MMAI framework game state
     State(const Game &game);
 
@@ -120,13 +220,13 @@ class State {
     // Parameters:
     //      Game& game: The current game state; used to retrieve previous moves
     // Returns a vector of moves specifying which actions can be taken from the current state
-    std::vector<MyMove> ACTIONS(const Game &game);
+    std::vector<std::pair<MyMove, State>> ACTIONS(const Game &game);
 
     // Successor generator
     // Parameters:
     //      MyMove& action: The move to be applied
     // Returns a pointer to the new, resulting State from applying the acion to the current State
-    State* RESULT(const MyMove& action) const;
+    State RESULT(const MyMove& action) const;
 
     // Display the current game state
     void print() const;
@@ -136,6 +236,22 @@ class State {
     const MyPiece* getPiece(const char& file,const int& rank) const;
 
 };
+
+struct Node
+{
+  State state;
+  MyMove action;
+  int depth;
+  Node(State _state, MyMove _action, int _depth) : state(_state), action(_action), depth(_depth) {};
+};
+
+float minv(Node node, const Game& game);
+
+float maxv(Node node, const Game& game);
+
+MyMove dlmm(const Game& game, State& current_state, int max_depth);
+
+MyMove iddlmm(const Game& game, State& current_state, int max_depth=3);
 
 }
 

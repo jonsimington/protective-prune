@@ -11,9 +11,9 @@
 #include "../../joueur/src/base_ai.hpp"
 #include "../../joueur/src/attr_wrapper.hpp"
 
-#include "custom_board.hpp"
-
 // You can add additional #includes here
+#include "custom_board.hpp"
+#include <limits>
 
 namespace cpp_client
 {
@@ -69,15 +69,8 @@ public:
     /// <returns>Represents if you want to end your turn. True means end your turn, False means to keep your turn going and re-call this function.</returns>
     bool run_turn();
 
-    /// <summary>
-    ///  Prints the current board using pretty ASCII art
-    /// </summary>
-    /// <remarks>
-    /// Note: you can delete this function if you wish
-    /// </remarks>
-    void print_current_board();
-
     // You can add additional methods here.
+    
 
 
     // ####################

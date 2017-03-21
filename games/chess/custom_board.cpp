@@ -14,6 +14,20 @@ namespace cpp_client
 namespace chess
 {
 
+// Bitboard operations
+U64 rol(U64 x, int s) { 
+    if (!s) return x;
+    return (x << s) | (x >>(64-s));
+};
+U64 ror(U64 x, int s) { 
+    if (!s) return x;
+    return (x >> s) | (x <<(64-s));
+};
+
+U64 genShift(U64 x, int s) {
+   return (s > 0) ? (x << s) : (x >> -s);
+};
+
 // Types that pawns can be promoted to
 const std::vector<const char*> promotions = {&ROOK, &KNIGHT, &BISHOP, &QUEEN};
 
@@ -212,8 +226,7 @@ State::~State()
   delete[] board;
 }
 
-
-std::vector<MyMove> State::ACTIONS(const Game &game)
+std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
 {
   // string in SAN
   std::vector<MyMove> moves;
@@ -488,11 +501,18 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
       i--;
     }
   }
+  std::random_shuffle(moves.begin(), moves.end());
+  std::vector<std::pair<MyMove, State>> successors;
+  for (auto move: moves)
+  {
+    std::pair<MyMove, State> successor(move, RESULT(move));
+    successors.push_back(successor);
+  }
 
-  return moves;
+  return successors;
 }
 
-State* State::RESULT(const MyMove& action) const
+State State::RESULT(const MyMove& action) const
 {
   int file = action.file - 'a';
   int rank = action.rank - 1;
@@ -501,27 +521,55 @@ State* State::RESULT(const MyMove& action) const
 
   MyPiece *oldPiece = board[file][rank];
   
-  State* result;
-  result = new State(*this);
+  State result(*this);
   
-  delete result->board[file2][rank2];
-  result->board[file2][rank2] = new MyPiece((action.promotion != nullptr ? action.promotion : oldPiece->type), true, oldPiece->owner);
+  delete result.board[file2][rank2];
+  result.board[file2][rank2] = new MyPiece((action.promotion != nullptr ? action.promotion : oldPiece->type), true, oldPiece->owner);
 
-  delete result->board[file][rank];
-  result->board[file][rank] = nullptr;
+  delete result.board[file][rank];
+  result.board[file][rank] = nullptr;
 
   if (action.move_type == "En Passant")
   {
-    delete result->board[file2][rank];
-    result->board[file2][rank] = nullptr;
+    delete result.board[file2][rank];
+    result.board[file2][rank] = nullptr;
   }
   else if (action.move_type == "Castle")
   {
     MyPiece *castle = new MyPiece(&ROOK, true, oldPiece->owner);
     int new_rank = (rank2 == 1 ? 2 : 5);
-    result->board[file2][new_rank] = castle;
+    result.board[file2][new_rank] = castle;
   }
+
+  result.current_player = (current_player + 1) % 2;
   return result;
+}
+
+bool State::in_check() const
+{
+  // Find the king
+  int ki, kj;
+  bool found=false;
+
+  for (int i = 0; i < 8; i++)
+  {
+    if (found)
+      break;
+    for (int j = 0; j < 8; j++)
+    {
+      MyPiece* p = board[i][j];
+      if (p != nullptr && p->type == &KING && p->owner == current_player)
+      {
+        ki = i;
+        kj = j;
+        found = true;
+        break;
+      }
+    }
+  }
+
+  // Check if the king is in check
+  return in_check(ki, kj, (current_player + 1) % 2);
 }
 
 bool State::in_check(const MyMove& action)
@@ -555,32 +603,10 @@ bool State::in_check(const MyMove& action)
     board[file2][new_rank] = castle;
   }
 
-
-  // Find the king
-  int ki, kj;
-  bool found=false;
-
-  for (int i = 0; i < 8; i++)
-  {
-    if (found)
-      break;
-    for (int j = 0; j < 8; j++)
-    {
-      MyPiece* p = board[i][j];
-      if (p != nullptr && p->type == &KING && p->owner == current_player)
-      {
-        ki = i;
-        kj = j;
-        found = true;
-        break;
-      }
-    }
-  }
-
-  // Check if the king is in check
-  bool check = in_check(ki, kj, (current_player + 1) % 2);
+  bool check = in_check();
   
   // Restore the board to its original state
+
   for (auto pr: preserved)
   {
     pair loc = pr.first;
@@ -590,6 +616,93 @@ bool State::in_check(const MyMove& action)
   }
 
   return check;
+}
+
+bool State::stalemate() const
+{
+  // Insufficient Material
+  int mats = 0;
+  for (int i = 0; i < 8; i++)
+  {
+    for (int j = 0; j < 8; j++)
+    {
+      auto *piece = board[i][j];
+      if (piece == nullptr)
+        continue;
+      if (piece->type == &PAWN || piece->type == &ROOK)
+      {
+        mats = 2;
+        break;
+      }
+      else if (piece->type == &BISHOP || piece->type == &KNIGHT)
+      {
+        mats++;
+        if (mats > 1)
+          break;
+      }
+    }
+  }
+  if (mats < 2)
+    return true;
+
+  // 50-move rule
+
+  // 4-fold repetition
+
+  return false;
+}
+
+int State::goal_reached(const Game& game)
+{
+  if ((ACTIONS(game).size()) == 0)
+  {
+    if (in_check())
+    {
+      return -1000000 * (game->current_turn % 2 == current_player ? 1 : -1); // Checkmate
+    }
+    return -1000; // Draw
+  }
+  if (stalemate())
+    return -1000;
+  return 0; // Not a goal
+}
+
+int State::material_advantage(bool maxPlayer)
+{
+  int advantage = 0;
+  for (int i = 0; i < 8; i++)
+  {
+    for (int j = 0; j < 8; j++)
+    {
+      auto *piece = board[i][j];
+      if (piece != nullptr)
+        advantage += (piece->owner == maxPlayer ? 1 : -1) * value(piece->type);
+    }
+  }
+  return advantage;
+}
+
+float State::evaluate(const Game& game)
+{
+  int goal = goal_reached(game);
+  if (goal != 0)
+    return goal;
+  return material_advantage(game->current_turn % 2);
+}
+
+int State::value(const char* pieceType) const
+{
+  if (pieceType == &PAWN)
+    return 1;
+  else if (pieceType == &ROOK)
+    return 5;
+  else if (pieceType == &BISHOP)
+    return 3;
+  else if (pieceType == &KNIGHT)  
+    return 3;
+  else if (pieceType == &QUEEN)
+    return 9;
+  return 0;
 }
 
 void State::print() const
@@ -613,6 +726,95 @@ void State::print() const
 const MyPiece* State::getPiece(const char& file, const int& rank) const
 {
   return board[static_cast<int>(file - 'a')][rank - 1];
+}
+
+
+
+void shuffle(std::vector<std::pair<MyMove, State>>& moves)
+{
+  for (int i = 0; i < moves.size(); i++)
+  {
+    std::pair<MyMove, State> tmp = moves[i];
+    int r = std::rand() % moves.size();
+    moves[i] = moves[r];
+    moves[r] = tmp;
+  }
+}
+
+
+float minv(Node node, const Game& game)
+{
+  if (node.depth == 0) // The depth limit has been reached, so evaluate the board state using our heuristic
+    return node.state.evaluate(game);
+  float best_value = std::numeric_limits<float>::infinity();
+  auto actions = node.state.ACTIONS(game);
+  
+  for (int i = 0; i < actions.size(); i++) // Find the min of all neighbors
+  {
+    best_value = std::min(best_value, maxv(Node(actions[i].second, actions[i].first, node.depth - 1), game));
+  }
+
+  if (best_value == -std::numeric_limits<float>::infinity())
+  {
+    // There are no moves remaining, so a checkmate or stalemate has occurred
+    return node.state.evaluate(game);
+  }
+  return best_value;
+}
+
+float maxv(Node node, const Game& game)
+{
+  if (node.depth == 0) // The depth limit has been reached, so evaluate the board state using our heuristic
+    return node.state.evaluate(game);
+  float best_value = -std::numeric_limits<float>::infinity();
+  std::vector<std::pair<MyMove, State>> actions = node.state.ACTIONS(game);
+
+  for (auto s2 : actions) // Find the max of all neighbors
+  {
+    best_value = std::max(best_value, minv(Node(s2.second, s2.first, node.depth - 1), game));
+  }
+
+  if (best_value == std::numeric_limits<float>::infinity())
+  {
+    // There are no moves remaining, so a checkmate or stalemate has occurred
+    return node.state.evaluate(game);
+  }
+  return best_value;
+}
+
+MyMove dlmm(const Game& game, State& current_state, int max_depth)
+{
+  /*
+  Perform Depth-limited Minimax Search
+  Returns:
+    The best action to take from the given state
+  */
+  float best_value = -std::numeric_limits<float>::infinity();
+  MyMove best_action;
+
+  auto neighbors = current_state.ACTIONS(game);
+
+  for (auto neighbor: neighbors)
+  {
+    float new_val = maxv(Node(neighbor.second, neighbor.first, max_depth - 1), game);
+    if (new_val > best_value)
+    {
+      best_action = neighbor.first;
+      best_value = new_val;
+    }
+  }
+
+  return best_action;
+}
+
+MyMove iddlmm(const Game& game, State& current_state, int max_depth)
+{
+  MyMove best_action;
+  for (int i = 1; i <= max_depth; i++)
+  {
+    best_action = dlmm(game, current_state, i);
+  }
+  return best_action;
 }
 
 
