@@ -168,6 +168,7 @@ class State {
     MyPiece ***board; // A 2d board, containing pointers to Chess pieces
     Board bitboard;
     bool current_player; // The player whose turn it is to make a move: {0 white, 1 black}
+    int last_capture; // The number of moves since the last pawn move or piece capture
 
   public:
     // Determine whether the target rank and file are in check by attacker
@@ -189,6 +190,9 @@ class State {
     // Determine whether the current state is in check
     // Returns true if the current_player's king is in check, else false
     bool in_check() const;
+
+    // Determines whether the given state is a draw
+    bool stalemate() const;
 
     // Determines whether the state is an end state; i.e. a stalemate or checkmate occurred
     int goal_reached(const Game& game);
@@ -247,7 +251,7 @@ float maxv(Node node, const Game& game);
 
 MyMove dlmm(const Game& game, State& current_state, int max_depth);
 
-MyMove iddlmm(const Game& game, State& current_state, int max_depth=4);
+MyMove iddlmm(const Game& game, State& current_state, int max_depth=3);
 
 }
 

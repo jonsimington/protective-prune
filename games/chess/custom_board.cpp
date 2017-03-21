@@ -606,6 +606,7 @@ bool State::in_check(const MyMove& action)
   bool check = in_check();
   
   // Restore the board to its original state
+
   for (auto pr: preserved)
   {
     pair loc = pr.first;
@@ -615,6 +616,40 @@ bool State::in_check(const MyMove& action)
   }
 
   return check;
+}
+
+bool State::stalemate() const
+{
+  // Insufficient Material
+  int mats = 0;
+  for (int i = 0; i < 8; i++)
+  {
+    for (int j = 0; j < 8; j++)
+    {
+      auto *piece = board[i][j];
+      if (piece == nullptr)
+        continue;
+      if (piece->type == &PAWN || piece->type == &ROOK)
+      {
+        mats = 2;
+        break;
+      }
+      else if (piece->type == &BISHOP || piece->type == &KNIGHT)
+      {
+        mats++;
+        if (mats > 1)
+          break;
+      }
+    }
+  }
+  if (mats < 2)
+    return true;
+
+  // 50-move rule
+
+  // 4-fold repetition
+
+  return false;
 }
 
 int State::goal_reached(const Game& game)
@@ -627,6 +662,8 @@ int State::goal_reached(const Game& game)
     }
     return -1000; // Draw
   }
+  if (stalemate())
+    return -1000;
   return 0; // Not a goal
 }
 
@@ -642,6 +679,7 @@ int State::material_advantage(bool maxPlayer)
         advantage += (piece->owner == maxPlayer ? 1 : -1) * value(piece->type);
     }
   }
+  return advantage;
 }
 
 float State::evaluate(const Game& game)
@@ -772,7 +810,7 @@ MyMove dlmm(const Game& game, State& current_state, int max_depth)
 MyMove iddlmm(const Game& game, State& current_state, int max_depth)
 {
   MyMove best_action;
-  for (int i = 1; i < max_depth; i++)
+  for (int i = 1; i <= max_depth; i++)
   {
     best_action = dlmm(game, current_state, i);
   }
