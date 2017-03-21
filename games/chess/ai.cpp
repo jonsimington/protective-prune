@@ -65,20 +65,9 @@ bool AI::run_turn()
 
     state.print();
 
+    auto move = iddlmm(game, state);
 
-    std::vector<std::pair<MyMove, State*>> moves = state.ACTIONS(game);
-    if (moves.size() == 0)
-    {
-      std::cout << "I can't find any valid moves :(" << std::endl;
-      return true;
-    }
-    int i = rand() % moves.size();
-    auto move = moves[i].first;
-
-    State* result = state.RESULT(move);
-    result->print();
-    delete result;
-
+    state.RESULT(move).print();
     for (auto piece : player->pieces)
     {
       if (piece->rank == move.rank && piece->file[0] == move.file)

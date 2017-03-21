@@ -13,6 +13,7 @@
 #include "move.hpp"
 #include "piece.hpp"
 #include "player.hpp"
+#include <algorithm>
 typedef unsigned long long U64;
 
 namespace cpp_client
@@ -77,7 +78,7 @@ struct MyMove {
     std::string move_type; // Used to indicate special moves: {"En Passant", "Castle", "Move"}
 
     // Constructor for MyMove
-    MyMove();
+    MyMove() : move_type("None") {};
     MyMove(char startingFile, int startingRank, char targetFile, int targetRank, const char* promotion_=0, std::string _move_type = "Move"): rank(startingRank), file(startingFile), rank2(targetRank), file2(targetFile), promotion(promotion_), move_type(_move_type) {};
 };
 
@@ -190,13 +191,17 @@ class State {
     bool in_check() const;
 
     // Determines whether the state is an end state; i.e. a stalemate or checkmate occurred
-    int goal_reached(const Game& game, const int maxPlayer);
+    int goal_reached(const Game& game);
 
     // Material advantage of the current state
     int material_advantage(bool maxPlayer);
 
     // Perform heuristic on current state
-    float evaluate(bool maxPlayer);
+    float evaluate(const Game& game);
+
+    // Value of piece types
+    int value(const char* pieceType) const;
+
 
     // Construct the State from the MMAI framework game state
     State(const Game &game);
@@ -211,13 +216,13 @@ class State {
     // Parameters:
     //      Game& game: The current game state; used to retrieve previous moves
     // Returns a vector of moves specifying which actions can be taken from the current state
-    std::vector<std::pair<MyMove, State*>> ACTIONS(const Game &game);
+    std::vector<std::pair<MyMove, State>> ACTIONS(const Game &game);
 
     // Successor generator
     // Parameters:
     //      MyMove& action: The move to be applied
     // Returns a pointer to the new, resulting State from applying the acion to the current State
-    State* RESULT(const MyMove& action) const;
+    State RESULT(const MyMove& action) const;
 
     // Display the current game state
     void print() const;
@@ -227,6 +232,22 @@ class State {
     const MyPiece* getPiece(const char& file,const int& rank) const;
 
 };
+
+struct Node
+{
+  State state;
+  MyMove action;
+  int depth;
+  Node(State _state, MyMove _action, int _depth) : state(_state), action(_action), depth(_depth) {};
+};
+
+float minv(Node node, const Game& game);
+
+float maxv(Node node, const Game& game);
+
+MyMove dlmm(const Game& game, State& current_state, int max_depth);
+
+MyMove iddlmm(const Game& game, State& current_state, int max_depth=4);
 
 }
 

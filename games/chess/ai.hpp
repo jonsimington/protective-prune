@@ -11,10 +11,9 @@
 #include "../../joueur/src/base_ai.hpp"
 #include "../../joueur/src/attr_wrapper.hpp"
 
-#include "custom_board.hpp"
-#include "search.cpp"
-
 // You can add additional #includes here
+#include "custom_board.hpp"
+#include <limits>
 
 namespace cpp_client
 {
