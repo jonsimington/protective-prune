@@ -784,11 +784,6 @@ float maxv(Node node, const Game& game)
 
 MyMove dlmm(const Game& game, State& current_state, int max_depth)
 {
-  /*
-  Perform Depth-limited Minimax Search
-  Returns:
-    The best action to take from the given state
-  */
   float best_value = -std::numeric_limits<float>::infinity();
   MyMove best_action;
 
