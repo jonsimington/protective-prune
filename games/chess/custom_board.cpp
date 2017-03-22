@@ -796,7 +796,7 @@ MyMove dlmm(const Game& game, State& current_state, int max_depth)
 
   for (auto neighbor: neighbors)
   {
-    float new_val = maxv(Node(neighbor.second, neighbor.first, max_depth - 1), game);
+    float new_val = minv(Node(neighbor.second, neighbor.first, max_depth - 1), game);
     if (new_val > best_value)
     {
       best_action = neighbor.first;
