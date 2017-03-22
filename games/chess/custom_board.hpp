@@ -160,44 +160,6 @@ class State {
 
 };
 
-
-////////////////////////////////////////////////////////////////////// 
-/// @class Node 
-/// @brief A node for representing state, action and depth
-//////////////////////////////////////////////////////////////////////
-struct Node
-{
-  State state;
-  MyMove action;
-  int depth;
-  Node(State _state, MyMove _action, int _depth) : state(_state), action(_action), depth(_depth) {};
-};
-
-
-// Find the lowest possible value from all actions
-float minv(Node node, const Game& game);
-
-// Find the highest possible value from all actions
-// Parameters:
-//      Node game: The game object
-float maxv(Node node, const Game& game);
-
-// Perform Depth-limited Minimax Search, exploring to the target depth
-// Parameters:
-//      Game& game: The game object
-//      State& current_state: The starting state
-//      int max_depth: The maximum depth to explore to
-// Returns the best action found to take from the given state
-MyMove dlmm(const Game& game, State& current_state, int max_depth);
-
-// Perform Iterative deepening depth-limited Minimax Search at the depth of max_depth
-// Parameters:
-//      Game& game: The game object
-//      State& current_state: The starting state
-//      int max_depth: The maximum depth to explore to
-// Returns the best action found to take from the given state 
-MyMove iddlmm(const Game& game, State& current_state, int max_depth=3);
-
 }
 
 }

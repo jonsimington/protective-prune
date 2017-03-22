@@ -14,20 +14,6 @@ namespace cpp_client
 namespace chess
 {
 
-// Bitboard operations
-U64 rol(U64 x, int s) { 
-    if (!s) return x;
-    return (x << s) | (x >>(64-s));
-};
-U64 ror(U64 x, int s) { 
-    if (!s) return x;
-    return (x >> s) | (x <<(64-s));
-};
-
-U64 genShift(U64 x, int s) {
-   return (s > 0) ? (x << s) : (x >> -s);
-};
-
 // Types that pawns can be promoted to
 const std::vector<const char*> promotions = {&ROOK, &KNIGHT, &BISHOP, &QUEEN};
 
@@ -645,10 +631,6 @@ bool State::stalemate() const
   if (mats < 2)
     return true;
 
-  // 50-move rule
-
-  // 4-fold repetition
-
   return false;
 }
 
@@ -726,90 +708,6 @@ void State::print() const
 const MyPiece* State::getPiece(const char& file, const int& rank) const
 {
   return board[static_cast<int>(file - 'a')][rank - 1];
-}
-
-
-
-void shuffle(std::vector<std::pair<MyMove, State>>& moves)
-{
-  for (int i = 0; i < moves.size(); i++)
-  {
-    std::pair<MyMove, State> tmp = moves[i];
-    int r = std::rand() % moves.size();
-    moves[i] = moves[r];
-    moves[r] = tmp;
-  }
-}
-
-
-float minv(Node node, const Game& game)
-{
-  if (node.depth == 0) // The depth limit has been reached, so evaluate the board state using our heuristic
-    return node.state.evaluate(game);
-  float best_value = std::numeric_limits<float>::infinity();
-  auto actions = node.state.ACTIONS(game);
-  
-  for (int i = 0; i < actions.size(); i++) // Find the min of all neighbors
-  {
-    best_value = std::min(best_value, maxv(Node(actions[i].second, actions[i].first, node.depth - 1), game));
-  }
-
-  if (best_value == -std::numeric_limits<float>::infinity())
-  {
-    // There are no moves remaining, so a checkmate or stalemate has occurred
-    return node.state.evaluate(game);
-  }
-  return best_value;
-}
-
-float maxv(Node node, const Game& game)
-{
-  if (node.depth == 0) // The depth limit has been reached, so evaluate the board state using our heuristic
-    return node.state.evaluate(game);
-  float best_value = -std::numeric_limits<float>::infinity();
-  std::vector<std::pair<MyMove, State>> actions = node.state.ACTIONS(game);
-
-  for (auto s2 : actions) // Find the max of all neighbors
-  {
-    best_value = std::max(best_value, minv(Node(s2.second, s2.first, node.depth - 1), game));
-  }
-
-  if (best_value == std::numeric_limits<float>::infinity())
-  {
-    // There are no moves remaining, so a checkmate or stalemate has occurred
-    return node.state.evaluate(game);
-  }
-  return best_value;
-}
-
-MyMove dlmm(const Game& game, State& current_state, int max_depth)
-{
-  float best_value = -std::numeric_limits<float>::infinity();
-  MyMove best_action;
-
-  auto neighbors = current_state.ACTIONS(game);
-
-  for (auto neighbor: neighbors)
-  {
-    float new_val = minv(Node(neighbor.second, neighbor.first, max_depth - 1), game);
-    if (new_val > best_value)
-    {
-      best_action = neighbor.first;
-      best_value = new_val;
-    }
-  }
-
-  return best_action;
-}
-
-MyMove iddlmm(const Game& game, State& current_state, int max_depth)
-{
-  MyMove best_action;
-  for (int i = 1; i <= max_depth; i++)
-  {
-    best_action = dlmm(game, current_state, i);
-  }
-  return best_action;
 }
 
 

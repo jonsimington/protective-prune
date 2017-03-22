@@ -4,6 +4,7 @@
 #include "ai.hpp"
 
 // You can add #includes here for your AI.
+#include "search.hpp"
 
 #include <cmath>
 
@@ -68,7 +69,7 @@ bool AI::run_turn()
     auto move = iddlmm(game, state);
 
     state.RESULT(move).print();
-    std::cout<<state.RESULT(move).evaluate(game)<<std::endl;
+
     for (auto piece : player->pieces)
     {
       if (piece->rank == move.rank && piece->file[0] == move.file)
