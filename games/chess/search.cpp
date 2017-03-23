@@ -12,7 +12,7 @@ namespace cpp_client
 namespace chess
 {
 
-float minv(State& state, int depth, const Game& game)
+float minv(State& state, int depth, const Game& game, float alpha, float beta)
 {
   if (depth == 0) // The depth limit has been reached, so evaluate the board state using our heuristic
     return state.evaluate(game);
@@ -21,7 +21,17 @@ float minv(State& state, int depth, const Game& game)
   
   for (int i = 0; i < actions.size(); i++) // Find the min of all neighbors
   {
-    best_value = std::min(best_value, maxv(actions[i].second, depth - 1, game));
+    float new_val = maxv(actions[i].second, depth - 1, game, alpha, beta);
+    if (new_val > alpha && new_val < beta)
+    {
+      beta = new_val;
+      best_value = new_val;
+    }
+    else if (new_val <= alpha) // fail low, so prune
+    {
+      return new_val;
+    }
+    // else fail high, so ignore
   }
 
   if (best_value == -std::numeric_limits<float>::infinity())
@@ -32,7 +42,7 @@ float minv(State& state, int depth, const Game& game)
   return best_value;
 }
 
-float maxv(State& state, int depth, const Game& game)
+float maxv(State& state, int depth, const Game& game, float alpha, float beta)
 {
   if (depth == 0) // The depth limit has been reached, so evaluate the board state using our heuristic
     return state.evaluate(game);
@@ -41,7 +51,17 @@ float maxv(State& state, int depth, const Game& game)
 
   for (auto s2 : actions) // Find the max of all neighbors
   {
-    best_value = std::max(best_value, minv(s2.second, depth - 1, game));
+    float new_val = minv(s2.second, depth - 1, game, alpha, beta); 
+    if (new_val > alpha && new_val < beta)
+    {
+      alpha = new_val;
+      best_value = new_val;
+    }
+    else if (new_val >= beta) // fail high, so prune
+    {
+      return new_val;
+    }
+    // else fail low, so ignore
   }
 
   if (best_value == std::numeric_limits<float>::infinity())
@@ -54,19 +74,21 @@ float maxv(State& state, int depth, const Game& game)
 
 MyMove dlmm(const Game& game, State& current_state, int max_depth)
 {
-  float best_value = -std::numeric_limits<float>::infinity();
+  float alpha = -std::numeric_limits<float>::infinity();
+  float beta = std::numeric_limits<float>::infinity();
   MyMove best_action;
 
   auto neighbors = current_state.ACTIONS(game);
 
   for (auto neighbor: neighbors)
   {
-    float new_val = minv(neighbor.second, max_depth - 1, game);
-    if (new_val > best_value)
+    float new_val = minv(neighbor.second, max_depth - 1, game, alpha, beta);
+    if (new_val > alpha)
     {
+      alpha = new_val;
       best_action = neighbor.first;
-      best_value = new_val;
     }
+    // else fail low, so ignore
   }
 
   return best_action;
