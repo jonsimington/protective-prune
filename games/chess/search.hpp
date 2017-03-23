@@ -23,10 +23,10 @@ namespace chess
 {
 
 // Find the lowest possible value from all actions
-float minv(State& state, int depth, const Game& game);
+float minv(State& state, int depth, const Game& game, float alpha, float beta);
 
 // Find the highest possible value from all actions
-float maxv(State& state, int depth, const Game& game);
+float maxv(State& state, int depth, const Game& game, float alpha, float beta);
 
 // Perform Depth-limited Minimax Search, exploring to the target depth
 // Parameters:
