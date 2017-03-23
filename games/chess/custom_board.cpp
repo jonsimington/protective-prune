@@ -861,7 +861,10 @@ std::vector<std::pair<pair, MyPiece*>> State::APPLY(const MyMove& action)
   {
     MyPiece *castle = new MyPiece(&ROOK, true, oldPiece->owner);
     int new_rank = (rank2 == 1 ? 2 : 5);
-    preserved.push_back(std::pair<pair, MyPiece*>(pair(file2, new_rank), board[file2][new_rank]));
+    int old_rank = (rank2 == 1 ? 0 : 7);
+    preserved.push_back(std::pair<pair, MyPiece*>(pair(file2, old_rank), board[file2][old_rank]));
+    preserved.push_back(std::pair<pair, MyPiece*>(pair(file2, new_rank), nullptr));
+    board[file2][old_rank] = nullptr;
     board[file2][new_rank] = castle;
   }
 
