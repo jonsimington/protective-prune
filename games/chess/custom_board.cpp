@@ -512,6 +512,285 @@ std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
   return successors;
 }
 
+bool State::actions_exist(const Game &game)
+{
+  // string in SAN
+  std::vector<MyMove> moves;
+
+  // Determine ability to castle & en passant
+  int j = 0;
+  for (int i = 0; i < 4; i++)
+  {
+    while(game->fen[j++] != ' ');
+    i++;
+  }
+
+  std::string token = game->fen.substr(j);
+  std::string castle = token.substr(0, token.find(" "));
+  while(game->fen[j++] != ' ');
+  token = game->fen.substr(j);
+  std::string enPassant = token.substr(0, token.find(" "));
+
+  // Iterate through the entire board
+  for (int i = 0; i < 8; i++)
+  {
+    for (int j = 0; j < 8; j++)
+    {
+      if (board[i][j] == nullptr || board[i][j]->owner != current_player)
+      {
+        continue;
+      }
+      MyPiece* piece = board[i][j];
+      const char* type = piece->type;
+
+      const int forward = (current_player == 0 ? 1 : -1);
+      char file = 'a' + i;
+      int rank = j + 1;
+
+      
+      if (type == &PAWN)
+      {
+        // Pawns can move 2 spaces forward if
+        //    there are no pieces between the pawn and the target square or on the target square,
+        //    the pawn is in its starting rank
+        if (iB(j+forward*2) && !piece->has_moved && board[i][j+forward] == nullptr && board[i][j+forward*2] == nullptr)
+        {
+            moves.push_back(MyMove(file, rank, file, rank + forward*2));
+        }
+
+        // Pawns can move 1 space forward if
+        //    there are no pieces on the target square
+        if (iB(j+forward) && board[i][j+forward] == nullptr)
+        {
+          // Pawns can be promoted 
+          //    if they advance to the final rank
+          if (0 == j + forward || 7 == j + forward)
+          {
+            for (auto promotion : promotions)
+            {
+              moves.push_back(MyMove(file, rank, file, rank + forward, promotion));
+            }
+          }
+          else
+            moves.push_back(MyMove(file, rank, file, rank + forward));
+        }
+
+        // Pawns can move 1 space forward diagonally if
+        //    there is an enemy piece on the target square
+        for (int dir : LR)
+        {
+          if (iB(i+dir) && iB(j+forward) && board[i+dir][j+forward] != nullptr)
+          {
+            MyPiece *jumped = board[i+dir][j+forward];
+            if (piece->owner != jumped->owner)
+            {
+              // Pawns can be promoted 
+              //    if they advance to the final rank
+              if (j + forward == 0 || j + forward == 7)
+              {
+                for (auto promotion : promotions)
+                {
+                  moves.push_back(MyMove(file, rank, file+dir, rank+forward, promotion));
+                }
+              }
+              else
+                moves.push_back(MyMove(file, rank, file+dir, rank+forward));
+            }
+          }
+        }
+
+
+
+        // Pawns can perform En Passant if
+        //    the previous move was a pawn advancing two squares
+        //    the pawn is now adjacent to this pawn
+        if (enPassant[0] != '-')
+        {
+          if ((enPassant[1] - '0' - rank - forward) == 0 && abs((int)(enPassant[0] - 'a') - i) == 1)
+            {
+              int dir = enPassant[0] - file;
+              moves.push_back(MyMove(file, rank, file+dir, rank+forward, 0, "En Passant"));
+            }
+        }
+
+
+
+      }
+      else if (type == &KING)
+      {
+        // Kings can move 1 space in any direction if
+        //    the target square is not a piece owned by the player
+        for (auto direction: KING_MOVES)
+        {
+          int fd = direction.first; int rd = direction.second;
+          if (!iB(i+fd) || !iB(j+rd))
+            continue;
+          auto *newloc = board[i+fd][j+rd];
+          if (newloc == nullptr || newloc->owner != current_player)
+            moves.push_back(MyMove(file, rank, file+fd, rank+rd));
+        }
+
+        // The king can castle with a friendly rook if
+        //    both it and the castling rook have not moved,
+        //    the king does not pass through a square that is attacked,
+        //    the king is not in check,
+        //    there are no pieces between the rook and the king,
+        //    the target square is not a piece owned by the player
+        if (!piece->has_moved)
+        {
+          for (auto direction : CASTLING)
+          {
+            char side = (direction.first == -4 ? 'Q' : 'K');
+            if (piece->owner == 1)
+            {
+              side = std::tolower(side);
+            }
+            if (castle.find(side) > 3)
+              continue;
+
+            bool can_castle = true;
+            int fd = direction.first; int rd = direction.second;            
+            int inc = fd > 0;
+
+            MyPiece* castle = board[i+fd][j+rd];
+            if (castle == nullptr || castle->has_moved)
+              can_castle = false;
+            else
+            {
+              int m = i; 
+              if (inc)
+                while(m <= i + 2)
+                {
+                  if (in_check(m, j, (current_player + 1)%2) || (m != i && board[m][j] != nullptr))
+                  {
+                    can_castle = false;
+                    break;
+                  }
+                  m++;
+                }
+              else
+                while(m >= i - 3)
+                {
+                  if ((m >= i - 2 && in_check(m, j, (current_player + 1)%2)) || (m != i && board[m][j] != nullptr))
+                  {
+                    can_castle = false;
+                    break;
+                  }
+                  m--;
+                }
+            }
+            if (can_castle)
+            {
+              moves.push_back(MyMove(file, rank, file + (inc ? 2 : -2), rank+rd, 0, "Castle"));
+            }
+          }
+        }
+
+      }
+      else if (type == &QUEEN)
+      {
+        // Queens can move any number of spaces in any direction if
+        //    there are no pieces between the Queen and the target square,
+        //    the target square is not a piece owned by the player
+        for (auto direction: KING_MOVES)
+        {
+          for (int r = 1; r < 8; r++)
+          {
+            int fd = direction.first; int rd = direction.second;
+            if (!iB(i+fd*r) || !iB(j+rd*r))
+              break;
+            auto *newloc = board[i+fd*r][j+rd*r];
+            if (newloc == nullptr)
+              moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+            else 
+            {
+              if (newloc->owner != current_player)
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+              break;
+            }
+          }
+        }
+      }
+      else if (type == &KNIGHT)
+      {
+        // Knights can move in an L shape if
+        //    the target square is not a piece owned by the player
+        for (auto direction: KNIGHT_MOVES)
+        {
+          int fd = direction.first; int rd = direction.second;
+          if (!iB(i+fd) || !iB(j+rd))
+            continue;
+          auto *newloc = board[i+fd][j+rd];
+          if (newloc == nullptr || newloc->owner != current_player)
+            moves.push_back(MyMove(file, rank, file+fd, rank+rd));
+        }
+      }
+      else if (type == &ROOK)
+      {
+        // Rooks can move any number of spaces across a rank or file if
+        //    there are no pieces between the rook and the target square,
+        //    the target square is not a piece owned by the player
+        for (auto direction: ROOK_MOVES)
+        {
+          for (int r = 1; r < 8; r++)
+          {
+            int fd = direction.first; int rd = direction.second;
+            if (!iB(i+fd*r) || !iB(j+rd*r))
+              break;
+            auto *newloc = board[i+fd*r][j+rd*r];
+            if (newloc == nullptr)
+              moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+            else 
+            {
+              if (newloc->owner != current_player)
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+              break;
+            }
+          }
+        }
+      }
+      else if (type == &BISHOP)
+      {
+        // Bishops can move diagonally if
+        //    there are no pieces between the bishop and the target
+        //    the target square is not a piece owned by the player
+        for (auto direction: BISHOP_MOVES)
+        {
+          for (int r = 1; r < 8; r++)
+          {
+            int fd = direction.first; int rd = direction.second;
+            if (!iB(i+fd*r) || !iB(j+rd*r))
+              break;
+            auto *newloc = board[i+fd*r][j+rd*r];
+            if (newloc == nullptr)
+              moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+            else 
+            {
+              if (newloc->owner != current_player)
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+              break;
+            }
+          }
+        }
+      }
+
+      // If one of them was valid, return it
+      for (int i = 0; i < moves.size(); i++)
+      {
+        if (in_check(moves[i]))
+        {
+          moves.erase(moves.begin() + i);
+          i--;
+        }
+        else
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 State State::RESULT(const MyMove& action) const
 {
   int file = action.file - 'a';
@@ -654,7 +933,7 @@ bool State::stalemate() const
 
 int State::goal_reached(const Game& game)
 {
-  if ((ACTIONS(game).size()) == 0)
+  if (!actions_exist(game))
   {
     if (in_check())
     {
@@ -728,94 +1007,6 @@ const MyPiece* State::getPiece(const char& file, const int& rank) const
   return board[static_cast<int>(file - 'a')][rank - 1];
 }
 
-
-
-void shuffle(std::vector<std::pair<MyMove, State>>& moves)
-{
-  for (int i = 0; i < moves.size(); i++)
-  {
-    std::pair<MyMove, State> tmp = moves[i];
-    int r = std::rand() % moves.size();
-    moves[i] = moves[r];
-    moves[r] = tmp;
-  }
-}
-
-
-float minv(Node node, const Game& game)
-{
-  if (node.depth == 0) // The depth limit has been reached, so evaluate the board state using our heuristic
-    return node.state.evaluate(game);
-  float best_value = std::numeric_limits<float>::infinity();
-  auto actions = node.state.ACTIONS(game);
-  
-  for (int i = 0; i < actions.size(); i++) // Find the min of all neighbors
-  {
-    best_value = std::min(best_value, maxv(Node(actions[i].second, actions[i].first, node.depth - 1), game));
-  }
-
-  if (best_value == -std::numeric_limits<float>::infinity())
-  {
-    // There are no moves remaining, so a checkmate or stalemate has occurred
-    return node.state.evaluate(game);
-  }
-  return best_value;
-}
-
-float maxv(Node node, const Game& game)
-{
-  if (node.depth == 0) // The depth limit has been reached, so evaluate the board state using our heuristic
-    return node.state.evaluate(game);
-  float best_value = -std::numeric_limits<float>::infinity();
-  std::vector<std::pair<MyMove, State>> actions = node.state.ACTIONS(game);
-
-  for (auto s2 : actions) // Find the max of all neighbors
-  {
-    best_value = std::max(best_value, minv(Node(s2.second, s2.first, node.depth - 1), game));
-  }
-
-  if (best_value == std::numeric_limits<float>::infinity())
-  {
-    // There are no moves remaining, so a checkmate or stalemate has occurred
-    return node.state.evaluate(game);
-  }
-  return best_value;
-}
-
-MyMove dlmm(const Game& game, State& current_state, int max_depth)
-{
-  /*
-  Perform Depth-limited Minimax Search
-  Returns:
-    The best action to take from the given state
-  */
-  float best_value = -std::numeric_limits<float>::infinity();
-  MyMove best_action;
-
-  auto neighbors = current_state.ACTIONS(game);
-
-  for (auto neighbor: neighbors)
-  {
-    float new_val = minv(Node(neighbor.second, neighbor.first, max_depth - 1), game);
-    if (new_val > best_value)
-    {
-      best_action = neighbor.first;
-      best_value = new_val;
-    }
-  }
-
-  return best_action;
-}
-
-MyMove iddlmm(const Game& game, State& current_state, int max_depth)
-{
-  MyMove best_action;
-  for (int i = 1; i <= max_depth; i++)
-  {
-    best_action = dlmm(game, current_state, i);
-  }
-  return best_action;
-}
 
 
 } // chess

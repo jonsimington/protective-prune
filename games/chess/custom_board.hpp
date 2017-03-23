@@ -222,6 +222,12 @@ class State {
     // Returns a vector of moves specifying which actions can be taken from the current state
     std::vector<std::pair<MyMove, State>> ACTIONS(const Game &game);
 
+    // Reduced Move Generator
+    // Parameters:
+    //      Game& game: The current game state; used to retrieve previous moves
+    // Returns true if moves exist from the state, else false
+    bool actions_exist(const Game &game);
+
     // Successor generator
     // Parameters:
     //      MyMove& action: The move to be applied
@@ -236,22 +242,6 @@ class State {
     const MyPiece* getPiece(const char& file,const int& rank) const;
 
 };
-
-struct Node
-{
-  State state;
-  MyMove action;
-  int depth;
-  Node(State _state, MyMove _action, int _depth) : state(_state), action(_action), depth(_depth) {};
-};
-
-float minv(Node node, const Game& game);
-
-float maxv(Node node, const Game& game);
-
-MyMove dlmm(const Game& game, State& current_state, int max_depth);
-
-MyMove iddlmm(const Game& game, State& current_state, int max_depth=3);
 
 }
 
