@@ -34,7 +34,7 @@ float maxv(State& state, int depth, const Game& game, float alpha, float beta);
 //      State& current_state: The starting state
 //      int max_depth: The maximum depth to explore to
 // Returns the best action found to take from the given state
-MyMove dlmm(const Game& game, State& current_state, int max_depth);
+MyMove dlmm(const Game& game, State& current_state, int max_depth, int &best_value);
 
 // Perform Iterative deepening depth-limited Minimax Search at the depth of max_depth
 // Parameters:

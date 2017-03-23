@@ -74,12 +74,13 @@ struct MyMove {
     int rank; // The starting rank
     char file2; // The target file
     int rank2; // The target rank
+    const char* capture; // The piece type being captured
     const char* promotion; // The piece to promote to, for pawns at the final rank
-    std::string move_type; // Used to indicate special moves: {"En Passant", "Castle", "Move"}
+    std::string move_type; // Used to indicate special moves: {"En Passant", "Castle", "Move", "None"}
 
     // Constructor for MyMove
     MyMove() : move_type("None") {};
-    MyMove(char startingFile, int startingRank, char targetFile, int targetRank, const char* promotion_=0, std::string _move_type = "Move"): rank(startingRank), file(startingFile), rank2(targetRank), file2(targetFile), promotion(promotion_), move_type(_move_type) {};
+    MyMove(char startingFile, int startingRank, char targetFile, int targetRank, const char* capture_=0, const char* promotion_=0, std::string _move_type = "Move"): rank(startingRank), file(startingFile), rank2(targetRank), file2(targetFile), capture(capture_), promotion(promotion_), move_type(_move_type) {};
 };
 
 
@@ -220,7 +221,7 @@ class State {
     // Parameters:
     //      Game& game: The current game state; used to retrieve previous moves
     // Returns a vector of moves specifying which actions can be taken from the current state
-    std::vector<std::pair<MyMove, State>> ACTIONS(const Game &game);
+    std::vector<MyMove> ACTIONS(const Game &game);
 
     // Reduced Move Generator
     // Parameters:
@@ -233,6 +234,13 @@ class State {
     //      MyMove& action: The move to be applied
     // Returns a pointer to the new, resulting State from applying the acion to the current State
     State RESULT(const MyMove& action) const;
+
+
+    // Applies a move
+    std::vector<std::pair<pair, MyPiece*>> APPLY(const MyMove& action);
+
+    // Undoes a move
+    void UNDO(const MyMove& action, std::vector<std::pair<pair, MyPiece*>>);
 
     // Display the current game state
     void print() const;
