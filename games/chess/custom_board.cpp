@@ -226,9 +226,8 @@ State::~State()
   delete[] board;
 }
 
-std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
+std::vector<MyMove> State::ACTIONS(const Game &game)
 {
-  // string in SAN
   std::vector<MyMove> moves;
 
   // Determine ability to castle & en passant
@@ -282,7 +281,7 @@ std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
           {
             for (auto promotion : promotions)
             {
-              moves.push_back(MyMove(file, rank, file, rank + forward, promotion));
+              moves.push_back(MyMove(file, rank, file, rank + forward, nullptr, promotion));
             }
           }
           else
@@ -295,8 +294,8 @@ std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
         {
           if (iB(i+dir) && iB(j+forward) && board[i+dir][j+forward] != nullptr)
           {
-            MyPiece *jumped = board[i+dir][j+forward];
-            if (piece->owner != jumped->owner)
+            MyPiece *captured = board[i+dir][j+forward];
+            if (piece->owner != captured->owner)
             {
               // Pawns can be promoted 
               //    if they advance to the final rank
@@ -304,7 +303,7 @@ std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
               {
                 for (auto promotion : promotions)
                 {
-                  moves.push_back(MyMove(file, rank, file+dir, rank+forward, promotion));
+                  moves.push_back(MyMove(file, rank, file+dir, rank+forward, captured->type, promotion));
                 }
               }
               else
@@ -341,7 +340,7 @@ std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
             continue;
           auto *newloc = board[i+fd][j+rd];
           if (newloc == nullptr || newloc->owner != current_player)
-            moves.push_back(MyMove(file, rank, file+fd, rank+rd));
+            moves.push_back(MyMove(file, rank, file+fd, rank+rd, newloc == nullptr ? nullptr : newloc->type));
         }
 
         // The king can castle with a friendly rook if
@@ -419,7 +418,7 @@ std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
             else 
             {
               if (newloc->owner != current_player)
-                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r, newloc->type));
               break;
             }
           }
@@ -436,7 +435,7 @@ std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
             continue;
           auto *newloc = board[i+fd][j+rd];
           if (newloc == nullptr || newloc->owner != current_player)
-            moves.push_back(MyMove(file, rank, file+fd, rank+rd));
+            moves.push_back(MyMove(file, rank, file+fd, rank+rd, newloc == nullptr ? nullptr : newloc->type));
         }
       }
       else if (type == &ROOK)
@@ -457,7 +456,7 @@ std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
             else 
             {
               if (newloc->owner != current_player)
-                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r, newloc->type));
               break;
             }
           }
@@ -481,7 +480,7 @@ std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
             else 
             {
               if (newloc->owner != current_player)
-                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r, newloc->type));
               break;
             }
           }
@@ -489,6 +488,7 @@ std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
       }
     }
   }
+
 
   
   // All moves  must be validated such that
@@ -502,14 +502,24 @@ std::vector<std::pair<MyMove, State>> State::ACTIONS(const Game &game)
     }
   }
   std::random_shuffle(moves.begin(), moves.end());
-  std::vector<std::pair<MyMove, State>> successors;
-  for (auto move: moves)
+
+  // Now perform captures first
+
+  int k = 0;
+  for (int i = 0; i < moves.size() - k; i++)
   {
-    std::pair<MyMove, State> successor(move, RESULT(move));
-    successors.push_back(successor);
+    if (moves[i].capture != nullptr)
+    {
+      moves.push_back(moves[i]);
+      moves.erase(moves.begin() + i);
+      i--;
+      k++;
+    }
   }
 
-  return successors;
+  std::reverse(moves.begin(), moves.end());
+
+  return moves;
 }
 
 bool State::actions_exist(const Game &game)
@@ -568,7 +578,7 @@ bool State::actions_exist(const Game &game)
           {
             for (auto promotion : promotions)
             {
-              moves.push_back(MyMove(file, rank, file, rank + forward, promotion));
+              moves.push_back(MyMove(file, rank, file, rank + forward, nullptr, promotion));
             }
           }
           else
@@ -581,8 +591,8 @@ bool State::actions_exist(const Game &game)
         {
           if (iB(i+dir) && iB(j+forward) && board[i+dir][j+forward] != nullptr)
           {
-            MyPiece *jumped = board[i+dir][j+forward];
-            if (piece->owner != jumped->owner)
+            MyPiece *captured = board[i+dir][j+forward];
+            if (piece->owner != captured->owner)
             {
               // Pawns can be promoted 
               //    if they advance to the final rank
@@ -590,7 +600,7 @@ bool State::actions_exist(const Game &game)
               {
                 for (auto promotion : promotions)
                 {
-                  moves.push_back(MyMove(file, rank, file+dir, rank+forward, promotion));
+                  moves.push_back(MyMove(file, rank, file+dir, rank+forward, captured->type, promotion));
                 }
               }
               else
@@ -627,7 +637,7 @@ bool State::actions_exist(const Game &game)
             continue;
           auto *newloc = board[i+fd][j+rd];
           if (newloc == nullptr || newloc->owner != current_player)
-            moves.push_back(MyMove(file, rank, file+fd, rank+rd));
+            moves.push_back(MyMove(file, rank, file+fd, rank+rd, newloc == nullptr ? nullptr : newloc->type));
         }
 
         // The king can castle with a friendly rook if
@@ -705,7 +715,7 @@ bool State::actions_exist(const Game &game)
             else 
             {
               if (newloc->owner != current_player)
-                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r, newloc->type));
               break;
             }
           }
@@ -722,7 +732,7 @@ bool State::actions_exist(const Game &game)
             continue;
           auto *newloc = board[i+fd][j+rd];
           if (newloc == nullptr || newloc->owner != current_player)
-            moves.push_back(MyMove(file, rank, file+fd, rank+rd));
+            moves.push_back(MyMove(file, rank, file+fd, rank+rd, newloc == nullptr ? nullptr : newloc->type));
         }
       }
       else if (type == &ROOK)
@@ -743,7 +753,7 @@ bool State::actions_exist(const Game &game)
             else 
             {
               if (newloc->owner != current_player)
-                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r, newloc->type));
               break;
             }
           }
@@ -767,7 +777,7 @@ bool State::actions_exist(const Game &game)
             else 
             {
               if (newloc->owner != current_player)
-                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r));
+                moves.push_back(MyMove(file, rank, file+fd*r, rank+rd*r, newloc->type));
               break;
             }
           }
