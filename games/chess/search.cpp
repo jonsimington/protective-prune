@@ -27,16 +27,16 @@ float minv(State& state, int depth, const Game& game, float alpha, float beta)
     if (new_val > alpha && new_val < beta)
     {
       beta = new_val;
-      best_value = new_val;
     }
     else if (new_val <= alpha) // fail low, so prune
     {
       return new_val;
     }
+    best_value = std::min(best_value, new_val);
     // else fail high, so ignore
   }
 
-  if (best_value == -std::numeric_limits<float>::infinity())
+  if (best_value == std::numeric_limits<float>::infinity())
   {
     // There are no moves remaining, so a checkmate or stalemate has occurred
     return state.evaluate(game);
@@ -60,16 +60,16 @@ float maxv(State& state, int depth, const Game& game, float alpha, float beta)
     if (new_val > alpha && new_val < beta)
     {
       alpha = new_val;
-      best_value = new_val;
     }
     else if (new_val >= beta) // fail high, so prune
     {
       return new_val;
     }
+    best_value = std::max(best_value, new_val);
     // else fail low, so ignore
   }
 
-  if (best_value == std::numeric_limits<float>::infinity())
+  if (best_value == -std::numeric_limits<float>::infinity())
   {
     // There are no moves remaining, so a checkmate or stalemate has occurred
     return state.evaluate(game);
