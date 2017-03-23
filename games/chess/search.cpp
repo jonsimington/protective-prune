@@ -21,8 +21,9 @@ float minv(State& state, int depth, const Game& game, float alpha, float beta)
   
   for (MyMove action : actions) // Find the min of all neighbors
   {
-    State successor = state.RESULT(action);
-    float new_val = maxv(successor, depth - 1, game, alpha, beta);
+    auto preserved = state.APPLY(action);
+    float new_val = maxv(state, depth - 1, game, alpha, beta); 
+    state.UNDO(action, preserved);
     if (new_val > alpha && new_val < beta)
     {
       beta = new_val;
@@ -52,8 +53,10 @@ float maxv(State& state, int depth, const Game& game, float alpha, float beta)
 
   for (MyMove action : actions) // Find the max of all neighbors
   {
-    State successor = state.RESULT(action);
-    float new_val = minv(successor, depth - 1, game, alpha, beta); 
+    auto preserved = state.APPLY(action);
+    float new_val = minv(state, depth - 1, game, alpha, beta); 
+    state.UNDO(action, preserved);
+
     if (new_val > alpha && new_val < beta)
     {
       alpha = new_val;
@@ -84,8 +87,9 @@ MyMove dlmm(const Game& game, State& current_state, int max_depth, int &best_val
 
   for (auto action: actions)
   {
-    State successor = current_state.RESULT(action);
-    float new_val = minv(successor, max_depth - 1, game, alpha, beta);
+    auto preserved = current_state.APPLY(action);
+    float new_val = minv(current_state, max_depth - 1, game, alpha, beta); 
+    current_state.UNDO(action, preserved);
     if (new_val > alpha)
     {
       alpha = new_val;

@@ -235,8 +235,12 @@ class State {
     // Returns a pointer to the new, resulting State from applying the acion to the current State
     State RESULT(const MyMove& action) const;
 
+
+    // Applies a move
+    std::vector<std::pair<pair, MyPiece*>> APPLY(const MyMove& action);
+
     // Undoes a move
-    State UNDO(const MyMove& action);
+    void UNDO(const MyMove& action, std::vector<std::pair<pair, MyPiece*>>);
 
     // Display the current game state
     void print() const;

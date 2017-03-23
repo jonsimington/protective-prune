@@ -69,8 +69,6 @@ bool AI::run_turn()
     auto move = iddlmm(game, state, 6);
 
     state.RESULT(move).print();
-    if (move.capture != nullptr)
-        std::cout<<"I captured a " << lengthen(move.capture) << std::endl;
 
     for (auto piece : player->pieces)
     {

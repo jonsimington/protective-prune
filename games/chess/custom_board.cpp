@@ -503,7 +503,7 @@ std::vector<MyMove> State::ACTIONS(const Game &game)
   }
   std::random_shuffle(moves.begin(), moves.end());
 
-  // Now perform captures first
+  // Now order captures to be first
 
   int k = 0;
   for (int i = 0; i < moves.size() - k; i++)
@@ -834,34 +834,7 @@ State State::RESULT(const MyMove& action) const
   return result;
 }
 
-bool State::in_check() const
-{
-  // Find the king
-  int ki, kj;
-  bool found=false;
-
-  for (int i = 0; i < 8; i++)
-  {
-    if (found)
-      break;
-    for (int j = 0; j < 8; j++)
-    {
-      MyPiece* p = board[i][j];
-      if (p != nullptr && p->type == &KING && p->owner == current_player)
-      {
-        ki = i;
-        kj = j;
-        found = true;
-        break;
-      }
-    }
-  }
-
-  // Check if the king is in check
-  return in_check(ki, kj, (current_player + 1) % 2);
-}
-
-bool State::in_check(const MyMove& action)
+std::vector<std::pair<pair, MyPiece*>> State::APPLY(const MyMove& action)
 {
   // Convert the files and ranks to [0,7]
   int file = action.file - 'a';
@@ -892,10 +865,18 @@ bool State::in_check(const MyMove& action)
     board[file2][new_rank] = castle;
   }
 
-  bool check = in_check();
+  current_player = !current_player;
   
+  return preserved;
+  
+}
+
+void State::UNDO(const MyMove& action, std::vector<std::pair<pair, MyPiece*>> preserved)
+{
   // Restore the board to its original state
 
+  current_player = !current_player;
+  
   for (auto pr: preserved)
   {
     pair loc = pr.first;
@@ -903,6 +884,44 @@ bool State::in_check(const MyMove& action)
     delete board[loc.first][loc.second];
     board[loc.first][loc.second] = orig;
   }
+}
+
+bool State::in_check() const
+{
+  // Find the king
+  int ki, kj;
+  bool found=false;
+
+  for (int i = 0; i < 8; i++)
+  {
+    if (found)
+      break;
+    for (int j = 0; j < 8; j++)
+    {
+      MyPiece* p = board[i][j];
+      if (p != nullptr && p->type == &KING && p->owner == current_player)
+      {
+        ki = i;
+        kj = j;
+        found = true;
+        break;
+      }
+    }
+  }
+
+  // Check if the king is in check
+  return in_check(ki, kj, (current_player + 1) % 2);
+}
+
+bool State::in_check(const MyMove& action)
+{
+  auto preserved = APPLY(action);
+
+  current_player = !current_player;
+  bool check = in_check();
+  current_player = !current_player;
+  
+  UNDO(action, preserved);
 
   return check;
 }
