@@ -85,81 +85,6 @@ struct MyMove {
 
 
 
-struct BitBoard
-{
-    U64 pieces;
-};
-
-
-const U64 universe = 0xffffffffffffffffULL;
-
-const U64 WHITE_PIECES[] = {
-        0x1000000000000000ULL, // King
-        0x0800000000000000ULL, // Queen
-        0x8100000000000000ULL, // Rook
-        0x2400000000000000ULL, // Bishop
-        0x4200000000000000ULL, // Knight
-        0x00ff000000000000ULL, // Pawn
-};
-
-const U64 BLACK_PIECES[] = {
-        0x0000000000000010ULL, // King
-        0x0000000000000008ULL, // Queen
-        0x0000000000000081ULL, // Rook
-        0x0000000000000024ULL, // Bishop
-        0x0000000000000042ULL, // Knight
-        0x000000000000ff00ULL, // Pawn
-};
-
-const U64 RANKS[] = {
-        0xff00000000000000ULL, 
-        0x00ff000000000000ULL, 
-        0x0000ff0000000000ULL, 
-        0x000000ff00000000ULL, 
-        0x00000000ff000000ULL, 
-        0x0000000000ff0000ULL, 
-        0x000000000000ff00ULL,
-        0x00000000000000ffULL,
-};
-
-const U64 FILES[] = {
-        0x0101010101010101ULL,
-        0x0202020202020202ULL,
-        0x0404040404040404ULL,
-        0x0808080808080808ULL,
-        0x1010101010101010ULL,
-        0x2020202020202020ULL,
-        0x4040404040404040ULL,
-        0x8080808080808080ULL,
-};
-
-struct Board
-{
-    BitBoard whitePawns;
-    BitBoard whiteRooks;
-    BitBoard whiteKnights;
-    BitBoard whiteBishops;
-    BitBoard whiteQueens;
-    BitBoard whiteKing;
-
-    BitBoard blackPawns;
-    BitBoard blackRooks;
-    BitBoard blackKnights;
-    BitBoard blackBishops;
-    BitBoard blackQueens;
-    BitBoard blackKing;
-
-    BitBoard whitePieces;
-    BitBoard blackPieces;
-    BitBoard pieces;
-
-};
-
-U64 rol(U64 x, int s);
-U64 ror(U64 x, int s);
-
-U64 genShift(U64 x, int s);
-
 ////////////////////////////////////////////////////////////////////// 
 /// @class State 
 /// @brief Simplified internal representation of a Chess gamestate
@@ -167,7 +92,6 @@ U64 genShift(U64 x, int s);
 class State {
   private:
     MyPiece ***board; // A 2d board, containing pointers to Chess pieces
-    Board bitboard;
     bool current_player; // The player whose turn it is to make a move: {0 white, 1 black}
     int last_capture; // The number of moves since the last pawn move or piece capture
 

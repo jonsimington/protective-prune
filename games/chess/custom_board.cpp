@@ -109,6 +109,11 @@ std::string lengthen(const char* name)
 
 }
 
+/*Board::Board(const Game& game)
+{
+
+}*/
+
 bool State::in_check(int i, int j, int attacker) const
 {
   // Determine whether the given tile is under attack by the opponent

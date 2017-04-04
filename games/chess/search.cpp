@@ -5,6 +5,7 @@
 ////////////////////////////////////////////////////////////////////// 
 
 #include "search.hpp"
+#include <time.h>
 
 namespace cpp_client
 {
@@ -102,17 +103,22 @@ MyMove dlmm(const Game& game, State& current_state, int max_depth, int &best_val
   return best_action;
 }
 
-MyMove iddlmm(const Game& game, State& current_state, int max_depth)
+MyMove tliddlmm(const Game& game, State& current_state, int max_depth, int max_time)
 {
   MyMove best_action;
   int best_value;
+  time_t start = time(NULL);
   for (int i = 1; i <= max_depth; i++)
   {
     best_action = dlmm(game, current_state, i, best_value);
 
-    std::cout << "value " << best_value << " at depth " << i << std::endl;
     if (best_value >= 10000) // Checkmate found, no need to keep searching
     {
+      break;
+    }
+    else if (difftime(time(NULL), start) > max_time) // Time limit exceeded; return current best action
+    {
+      std::cout << difftime(time(NULL), start) << std::endl;
       break;
     }
   }
