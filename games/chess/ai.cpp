@@ -66,7 +66,7 @@ bool AI::run_turn()
 
     state.print();
 
-    auto move = iddlmm(game, state, 6);
+    auto move = tliddlmm(game, state, 20, 1);
 
     state.RESULT(move).print();
 
