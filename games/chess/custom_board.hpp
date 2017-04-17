@@ -14,6 +14,7 @@
 #include "piece.hpp"
 #include "player.hpp"
 #include <algorithm>
+
 typedef unsigned long long U64;
 
 namespace cpp_client
@@ -81,6 +82,11 @@ struct MyMove {
     // Constructor for MyMove
     MyMove() : move_type("None") {};
     MyMove(char startingFile, int startingRank, char targetFile, int targetRank, const char* capture_=0, const char* promotion_=0, std::string _move_type = "Move"): rank(startingRank), file(startingFile), rank2(targetRank), file2(targetFile), capture(capture_), promotion(promotion_), move_type(_move_type) {};
+
+    std::string hash() const
+    {
+        return file + std::to_string(rank) + file2 + std::to_string(rank2);
+    };
 };
 
 

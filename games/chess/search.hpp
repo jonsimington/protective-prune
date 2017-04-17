@@ -15,18 +15,22 @@
 #include "player.hpp"
 
 #include "custom_board.hpp"
+#include <unordered_map>
 
 namespace cpp_client
 {
 
 namespace chess
 {
+	
+using hist = std::unordered_map<std::string, int>;
+
 
 // Find the lowest possible value from all actions
-float minv(State& state, int depth, const Game& game, float alpha, float beta, int quiescence);
+float minv(State& state, int depth, const Game& game, float alpha, float beta, int quiescence, hist& history);
 
 // Find the highest possible value from all actions
-float maxv(State& state, int depth, const Game& game, float alpha, float beta, int quiescence);
+float maxv(State& state, int depth, const Game& game, float alpha, float beta, int quiescence, hist& history);
 
 // Perform Depth-limited Minimax Search, exploring to the target depth
 // Parameters:
@@ -34,7 +38,7 @@ float maxv(State& state, int depth, const Game& game, float alpha, float beta, i
 //      State& current_state: The starting state
 //      int max_depth: The maximum depth to explore to
 // Returns the best action found to take from the given state
-MyMove tlmm(const Game& game, State& current_state, int max_depth, int &best_value, int quiescence);
+MyMove tlmm(const Game& game, State& current_state, int max_depth, int &best_value, int quiescence, hist& history);
 
 // Perform Time-limited Iterative deepening depth-limited alpha-beta pruning Minimax Search
 // Parameters:
