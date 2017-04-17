@@ -13,17 +13,26 @@ namespace cpp_client
 namespace chess
 {
 
-float minv(State& state, int depth, const Game& game, float alpha, float beta)
+float minv(State& state, int depth, const Game& game, float alpha, float beta, int quiescence)
 {
   if (depth == 0) // The depth limit has been reached, so evaluate the board state using our heuristic
-    return state.evaluate(game);
+  { 
+    // Search deeper if the state is non-quiescent
+    if (quiescence > 0 && !state.quiescent(game))
+    {
+      quiescence--;
+      depth++;
+    }
+    else
+      return state.evaluate(game);
+  }
   float best_value = std::numeric_limits<float>::infinity();
   std::vector<MyMove> actions = state.ACTIONS(game);
   
   for (MyMove action : actions) // Find the min of all neighbors
   {
     auto preserved = state.APPLY(action);
-    float new_val = maxv(state, depth - 1, game, alpha, beta); 
+    float new_val = maxv(state, depth - 1, game, alpha, beta, quiescence); 
     state.UNDO(action, preserved);
     if (new_val > alpha && new_val < beta)
     {
@@ -45,7 +54,7 @@ float minv(State& state, int depth, const Game& game, float alpha, float beta)
   return best_value;
 }
 
-float maxv(State& state, int depth, const Game& game, float alpha, float beta)
+float maxv(State& state, int depth, const Game& game, float alpha, float beta, int quiescence)
 {
   if (depth == 0) // The depth limit has been reached, so evaluate the board state using our heuristic
     return state.evaluate(game);
@@ -55,7 +64,7 @@ float maxv(State& state, int depth, const Game& game, float alpha, float beta)
   for (MyMove action : actions) // Find the max of all neighbors
   {
     auto preserved = state.APPLY(action);
-    float new_val = minv(state, depth - 1, game, alpha, beta); 
+    float new_val = minv(state, depth - 1, game, alpha, beta, quiescence); 
     state.UNDO(action, preserved);
 
     if (new_val > alpha && new_val < beta)
@@ -78,7 +87,7 @@ float maxv(State& state, int depth, const Game& game, float alpha, float beta)
   return best_value;
 }
 
-MyMove dlmm(const Game& game, State& current_state, int max_depth, int &best_value)
+MyMove dlmm(const Game& game, State& current_state, int max_depth, int &best_value, int quiescence)
 {
   float alpha = -std::numeric_limits<float>::infinity();
   float beta = std::numeric_limits<float>::infinity();
@@ -89,7 +98,7 @@ MyMove dlmm(const Game& game, State& current_state, int max_depth, int &best_val
   for (auto action: actions)
   {
     auto preserved = current_state.APPLY(action);
-    float new_val = minv(current_state, max_depth - 1, game, alpha, beta); 
+    float new_val = minv(current_state, max_depth - 1, game, alpha, beta, quiescence); 
     current_state.UNDO(action, preserved);
     if (new_val > alpha)
     {
@@ -103,22 +112,21 @@ MyMove dlmm(const Game& game, State& current_state, int max_depth, int &best_val
   return best_action;
 }
 
-MyMove tliddlmm(const Game& game, State& current_state, int max_depth, int max_time)
+MyMove tliddlmm(const Game& game, State& current_state, int max_depth, int max_time, int quiescence)
 {
   MyMove best_action;
   int best_value;
   time_t start = time(NULL);
   for (int i = 1; i <= max_depth; i++)
   {
-    best_action = dlmm(game, current_state, i, best_value);
+    best_action = dlmm(game, current_state, i, best_value, quiescence);
 
-    if (best_value >= 10000) // Checkmate found, no need to keep searching
+    if (best_value >= 10000 || best_value <= -10000) // Checkmate imminent, no need to keep searching
     {
       break;
     }
     else if (difftime(time(NULL), start) > max_time) // Time limit exceeded; return current best action
     {
-      std::cout << difftime(time(NULL), start) << std::endl;
       break;
     }
   }

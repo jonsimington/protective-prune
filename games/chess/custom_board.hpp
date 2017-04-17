@@ -141,6 +141,9 @@ class State {
     // State destructor
     ~State();
 
+    // Determines whether a state is quiescent or not
+    bool quiescent(const Game &game);
+
     // Move Generator
     // Parameters:
     //      Game& game: The current game state; used to retrieve previous moves
@@ -158,7 +161,6 @@ class State {
     //      MyMove& action: The move to be applied
     // Returns a pointer to the new, resulting State from applying the acion to the current State
     State RESULT(const MyMove& action) const;
-
 
     // Applies a move
     std::vector<std::pair<pair, MyPiece*>> APPLY(const MyMove& action);

@@ -231,6 +231,14 @@ State::~State()
   delete[] board;
 }
 
+bool State::quiescent(const Game &game)
+{
+  current_player = !current_player;
+  bool chk = in_check();
+  current_player = !current_player;
+  return !chk;
+}
+
 std::vector<MyMove> State::ACTIONS(const Game &game)
 {
   std::vector<MyMove> moves;
