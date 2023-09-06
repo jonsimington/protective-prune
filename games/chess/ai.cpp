@@ -22,7 +22,7 @@ namespace chess
 std::string AI::get_name() const
 {
     // REPLACE WITH YOUR TEAM NAME!
-    return "FreakBot";
+    return "Protective Prune";
 }
 
 /// <summary>
@@ -57,7 +57,7 @@ void AI::ended(bool won, const std::string& reason)
 /// </summary>
 /// <returns>Represents if you want to end your turn. True means end your turn, False means to keep your turn going and re-call this function.</returns>
 bool AI::run_turn()
-{   
+{
     std::cout << "Time Remaining: " << player->time_remaining << " ns" << std::endl;
 
     chess::Piece p = player->pieces[rand() % player->pieces.size()];
